@@ -2,7 +2,7 @@
 
 ## JSON Parse Errors / Truncated Responses
 
-Reduce `--batch-size` for that provider, or check `max_tokens` in `core/config.py`.
+Reduce `--batch-size` for that provider, or check `max_tokens` in `indic_ocr_pipeline/utils/config.py`.
 
 ## "annotation_quality": "degraded_text_only_fallback"
 

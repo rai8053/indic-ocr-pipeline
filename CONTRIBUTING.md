@@ -37,11 +37,11 @@ Thank you for your interest in improving the Indic OCR Pipeline!
 
 ## Adding a New Provider
 
-1. Create the provider function in `indic_ocr_pipeline3.py` following the existing pattern
-2. Add API key constant in `core/config.py`
-3. Register in `run_proofread_batch` provider dict and failover chain
-4. Add to `PROVIDER_INFO` in `utils/usage.py`
-5. Add to CLI choices in argparse
+1. Create the provider module in `indic_ocr_pipeline/providers/` following the existing pattern
+2. Add API key constant in `indic_ocr_pipeline/utils/config.py`
+3. Register in `run_proofread_batch` provider dict and failover chain in `indic_ocr_pipeline/providers/manager.py`
+4. Add to `PROVIDER_INFO` in `indic_ocr_pipeline/utils/usage.py`
+5. Add to CLI choices in argparse in `indic_ocr_pipeline/pipeline/runner.py`
 6. Add to `.env.example`
 7. Test with a sample page
 

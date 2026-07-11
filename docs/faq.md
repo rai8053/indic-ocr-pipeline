@@ -10,7 +10,7 @@ Start with Gemini (~1,500 req/day free). The pipeline falls back automatically.
 
 ## Can I add a new language?
 
-Add to `LANGUAGE_HINTS` in `core/config.py`. Google Vision supports major Indic scripts.
+Add to `LANGUAGE_HINTS` in `indic_ocr_pipeline/utils/config.py`. Google Vision supports major Indic scripts.
 
 ## What if all providers fail?
 

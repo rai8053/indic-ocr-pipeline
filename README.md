@@ -275,6 +275,10 @@ python indic_ocr_pipeline3.py \
 | `--report` | HTML quality report |
 | `--validate` | RFQ schema validation |
 | `--max-pages` | Limit pages processed |
+| `--dpi` | Rendering DPI for page images (default 150) |
+| `--jpeg-quality` | JPEG quality for page images (default 90) |
+| `--zip` | ZIP-compress the output directory |
+| `--samples` | Sample every Nth page (default 1 = all pages) |
 
 > **Batch size:** Larger batches reduce API calls but increase per-request tokens. Reduce batch size if you hit truncated JSON responses.
 
@@ -303,8 +307,7 @@ output/
   "block_relations": [
     {"source": 0, "target": 1, "relation": "caption_of_figure"}
   ],
-  "annotation_quality": "full_level4",
-  "validation_results": { "valid": true }
+  "annotation_quality": "full_level4"
 }
 ```
 
@@ -332,35 +335,46 @@ Text blocks without structure — no classes, no reading order, no relations.
 ## Project Structure
 
 ```
-├── indic_ocr_pipeline3.py    # Main pipeline (1700+ lines)
+├── indic_ocr_pipeline3.py    # Backward-compat CLI entry point (re-exports from package)
 ├── run.py                    # Interactive CLI
-├── core/
+├── api.py                    # FastAPI programmatic wrapper
+├── indic_ocr_pipeline/       # Main package
 │   ├── __init__.py
-│   ├── config.py             # API keys, model IDs, limits
-│   └── terminal.py           # Terminal I/O utilities
-├── layout/
-│   ├── __init__.py
-│   ├── reading_order.py      # Geometry-based reading order
-│   └── relations.py          # Auto relation detection
-├── utils/
-│   ├── __init__.py
-│   ├── usage.py              # Usage tracker + dashboard
-│   └── logging.py            # Pipeline logger
-├── validation/
-│   ├── __init__.py
-│   ├── schema.py             # RFQ validation
-│   └── scoring.py            # Quality scoring
-├── preprocessing/
-│   ├── __init__.py
-│   └── image.py              # OpenCV preprocessing
-├── qa/
-│   ├── __init__.py
-│   └── overlay.py            # QA overlay rendering
-├── report/
-│   ├── __init__.py
-│   └── html_report.py        # HTML report generation
-├── tests/                    # Test suite
+│   ├── models/
+│   │   ├── annotation.py     # Annotation/block data classes
+│   │   ├── provider.py       # Provider result types
+│   │   ├── quality.py        # Quality-score data class
+│   │   └── relation.py       # Relation data class
+│   ├── pipeline/
+│   │   ├── runner.py         # Main process_pdf() orchestrator
+│   │   ├── orchestrator.py   # Prompt builders, JSON extraction
+│   │   └── exporter.py       # Annotation JSON + ZIP export
+│   ├── providers/
+│   │   ├── gemini.py         # Gemini 2.5 Flash Lite wrapper
+│   │   ├── glm.py            # GLM-4V Flash wrapper
+│   │   ├── groq.py           # Groq (Llama 3.3 70B) wrapper
+│   │   ├── openrouter.py     # OpenRouter (Llama 3.3 70B) wrapper
+│   │   └── manager.py        # Failover chain, retry, IAMHC
+│   ├── layout/
+│   │   ├── detector.py       # Picture region detection
+│   │   ├── reading_order.py  # Geometry-based reading order
+│   │   ├── relations.py      # Auto caption/figure relation detection
+│   │   └── validator.py      # RFQ schema validation + scoring
+│   ├── ocr/
+│   │   ├── google_vision.py  # Google Cloud Vision OCR
+│   │   └── preprocessing.py  # OpenCV deskew/denoise/contrast
+│   ├── reporting/
+│   │   ├── html.py           # HTML quality report
+│   │   ├── overlay.py        # QA overlay rendering
+│   │   └── benchmark.py      # Timer/benchmark utilities
+│   └── utils/
+│       ├── config.py         # API keys, model IDs, limits, constants
+│       ├── usage.py          # Usage tracker + quota dashboard
+│       ├── logging.py        # Pipeline logger
+│       └── helpers.py        # Terminal I/O, image_to_base64
+├── tests/                    # Test suite (21 tests, pytest)
 ├── docs/                     # Documentation
+├── samples/                  # Sample PDFs for testing
 ├── .env.example
 ├── .gitignore
 ├── .editorconfig
@@ -368,6 +382,8 @@ Text blocks without structure — no classes, no reading order, no relations.
 ├── pyproject.toml
 ├── requirements.txt
 ├── requirements-dev.txt
+├── Dockerfile
+├── docker-compose.yml
 ├── LICENSE
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
@@ -411,10 +427,10 @@ Text blocks without structure — no classes, no reading order, no relations.
 - [x] Picture region detection (embedded + CV)
 - [x] Schema validation and quality scoring
 - [x] QA overlays and HTML reports
-- [ ] Refactor into modular package (`pipeline/`, `providers/`, `exporters/`)
-- [ ] FastAPI wrapper for programmatic access
+- [x] Refactor into modular package (`pipeline/`, `providers/`, `reporting/`)
+- [x] FastAPI wrapper for programmatic access (`api.py`)
 - [ ] Export to COCO / DocLayNet / HuggingFace Dataset formats
-- [ ] Docker support (Dockerfile + docker-compose)
+- [x] Docker support (Dockerfile + docker-compose.yml)
 - [ ] Parallel page processing
 - [ ] Web UI for upload and review
 - [ ] Documentation site (mkdocs)
@@ -442,7 +458,7 @@ The page falls back to Level 2 (raw Vision OCR output) with all classes set to `
 
 ### How do I add a new language?
 
-Add the language code and script hint to `LANGUAGE_HINTS` in `core/config.py`. Google Cloud Vision supports all major Indic scripts.
+Add the language code and script hint to `LANGUAGE_HINTS` in `indic_ocr_pipeline/utils/config.py`. Google Cloud Vision supports all major Indic scripts.
 
 ### Can I use my own LLM API?
 
@@ -452,7 +468,7 @@ Yes — the architecture is provider-agnostic. You can add any OpenAI-compatible
 
 ## Troubleshooting
 
-**JSON parse errors / truncated LLM responses** — Reduce `--batch-size` for that provider, or check `max_tokens` in `core/config.py`.
+**JSON parse errors / truncated LLM responses** — Reduce `--batch-size` for that provider, or check `max_tokens` in `indic_ocr_pipeline/utils/config.py`.
 
 **Page shows `"annotation_quality": "degraded_text_only_fallback"`** — A text-only fallback handled this page. Reprocess once a vision-capable provider has quota.
 
