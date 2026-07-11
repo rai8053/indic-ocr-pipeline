@@ -21,8 +21,21 @@
 ## Table of Contents
 
 - [Overview](#overview)
+  - [The Problem](#the-problem)
+  - [Research Contribution](#research-contribution)
+- [Pipeline Preview](#pipeline-preview)
 - [Features](#features)
+  - [Core](#core)
+  - [Provider Failover](#provider-failover)
+  - [Quality Assurance](#quality-assurance)
+  - [Preprocessing & Export](#preprocessing--export)
+  - [Supported Languages](#supported-languages)
+  - [Use Cases](#use-cases)
+- [Comparison with Alternatives](#comparison-with-alternatives)
 - [Architecture](#architecture)
+  - [Data Flow](#data-flow)
+  - [Provider Failover](#provider-failover-1)
+- [Example Transformation](#example-transformation)
 - [Annotation Levels](#annotation-levels)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
@@ -46,31 +59,84 @@
 
 ### The Problem
 
-Existing OCR tools extract raw text but lose document structure. Given a scanned PDF page, they return paragraphs of text but cannot tell you which paragraph is a **title**, a **footnote**, a **table caption**, or a **figure**. This makes the output unsuitable for training document-layout AI models.
+Existing OCR tools extract raw text but lose document structure. Given a scanned PDF page, they return paragraphs of text but cannot tell you which block is a **title**, a **footnote**, a **table caption**, or a **figure**. This makes the output unsuitable for training document-layout AI models.
 
 ### Why Indic OCR Is Difficult
 
-Indic scripts (Odia, Telugu, Tamil, Marathi, Bengali, etc.) are under-served by commercial document-layout tools. Most layout datasets and pre-trained models focus on English or Chinese. The scripts are cursive, have complex conjuncts, and use non-Latin Unicode ranges that many OCR engines handle poorly.
+| Challenge | Impact |
+|---|---|
+| Under-served scripts | Indic languages (Odia, Telugu, Tamil, Marathi, Bengali, etc.) have few commercial layout tools |
+| English/Chinese bias | Most layout datasets and pre-trained models ignore Indic scripts |
+| Complex scripts | Cursive glyphs, conjuncts, and non-Latin Unicode ranges challenge traditional OCR engines |
 
 ### What This Project Does
 
-This pipeline converts scanned Indic-language PDFs into **RFQ Level 4 annotations** — a structured dataset with:
+> **Indic OCR Pipeline** converts scanned Indic-language PDFs into **RFQ Level 4 annotations** — a structured dataset with class labels, reading order, caption relations, and LaTeX markup. It combines Google Cloud Vision OCR with a 5-provider LLM failover chain — all within free-tier API limits.
 
-- Per-block class labels from a 13-class taxonomy
-- Natural reading order
-- Caption-to-figure/table relations
-- LaTeX markup for tables and display formulas
+### Key Differentiators
 
-It combines **Google Cloud Vision OCR** with a **5-provider LLM failover chain** — all within free-tier API limits.
+| Capability | This Project | Typical OCR |
+|---|---|---|
+| Output type | Structured annotations (13 classes) | Raw text |
+| Language focus | Indic-first (12 languages) | English/Chinese |
+| Cost | **Free tier only** (quota-checked) | Paid API or local GPU |
+| Provider resilience | 5-LLM failover chain | Single provider |
+| Validation | Schema + scoring + QA overlays | None |
+| Deployment | CLI + Docker + FastAPI | Usually one mode |
 
-### What Makes It Unique
+### Research Contribution
 
-- **Entirely free-tier** — no API costs; quota-checked before every call
-- **5-provider failover** — `gemini → glm → iamhc → openrouter → groq`; if one hits quota, the next takes over
-- **Indic-first** — 12 major Indic languages supported, with more addable via config
-- **RFQ Level 4 output** — full document-layout annotations ready for model training
-- **Schema-validated** — every output JSON is checked for consistency and correctness
-- **Docker + FastAPI** — run as a CLI tool, a container, or a REST API
+This project addresses the **document-layout annotation gap for low-resource Indic scripts** by combining:
+
+1. **Free-tier cloud OCR** (Google Cloud Vision) for paragraph detection and transcription
+2. **Multi-LLM failover** — a novel orchestration strategy that chains 5 providers with automatic degradation
+3. **Schema-validated RFQ Level 4 output** — a complete document-layout training dataset format
+
+The key insight is that **free-tier API limits can be managed through provider diversity**: when one hits quota, the next takes over, yielding higher overall throughput than any single provider alone.
+
+---
+
+## Pipeline Preview
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><strong>Input PDF</strong></td>
+      <td align="center"><strong>OCR + Bounding Boxes</strong></td>
+      <td align="center"><strong>RFQ Level‑4 Annotation</strong></td>
+    </tr>
+    <tr>
+      <td><img src="docs/images/pipeline-input.png" alt="Input PDF page" width="100%"/></td>
+      <td><img src="docs/images/pipeline-ocr.png" alt="OCR with bounding boxes" width="100%"/></td>
+      <td><img src="docs/images/pipeline-annotated.png" alt="Annotated layout with classes" width="100%"/></td>
+    </tr>
+    <tr>
+      <td align="center"><em>Scanned Odia PDF page</em></td>
+      <td align="center"><em>Google Vision paragraphs + boxes</em></td>
+      <td align="center"><em>Classified blocks, reading order, relations</em></td>
+    </tr>
+  </table>
+</div>
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><strong>QA Overlay</strong></td>
+      <td align="center"><strong>Reading Order Arrows</strong></td>
+      <td align="center"><strong>HTML Quality Report</strong></td>
+    </tr>
+    <tr>
+      <td><img src="docs/images/qa-overlay.png" alt="QA overlay with class colors" width="100%"/></td>
+      <td><img src="docs/images/reading-order.png" alt="Reading order arrows" width="100%"/></td>
+      <td><img src="docs/images/quality-report.png" alt="HTML quality report dashboard" width="100%"/></td>
+    </tr>
+    <tr>
+      <td align="center"><em>Colored boxes per class</em></td>
+      <td align="center"><em>Arrow overlay for order</em></td>
+      <td align="center"><em>Per-page score breakdown</em></td>
+    </tr>
+  </table>
+</div>
 
 ---
 
@@ -127,70 +193,198 @@ It combines **Google Cloud Vision OCR** with a **5-provider LLM failover chain**
 
 Languages are configured in `indic_ocr_pipeline/utils/config.py` (the `LANGUAGE_HINTS` dict). Adding a new language is a one-line change.
 
+### Use Cases
+
+| Domain | Application | How This Project Helps |
+|---|---|---|
+| **Digital libraries** | Preserve historical Indic texts | Converts scanned archives to structured, searchable annotations |
+| **NLP research** | Train document-layout models | Produces RFQ Level-4 training data from raw PDFs |
+| **Government archives** | Process gazettes and reports | Automates layout classification for large document collections |
+| **Academic publishing** | Extract tables and formulas from papers | Generates LaTeX from scanned tables and display formulas |
+| **OCR post-correction** | Fix transcription errors in Indic scripts | LLM proofreading improves text quality over raw OCR |
+| **Dataset creation** | Build Indic document benchmarks | Schema-validated, scored, and ready for model training |
+
+---
+
+## Comparison with Alternatives
+
+| Capability | **This Project** | Google Vision | PaddleOCR | EasyOCR | Tesseract |
+|---|---|---|---|---|---|
+| Indic script support | ✅ **12 languages** | ✅ 300+ langs | ⚠️ Limited | ⚠️ Limited | ⚠️ Requires lang pack |
+| Layout classification | ✅ **13-class RFQ** | ❌ Text only | ❌ Text only | ❌ Text only | ❌ Text only |
+| Reading order | ✅ **LLM + geometry** | ❌ | ❌ | ❌ | ❌ |
+| Caption relations | ✅ **5 relation types** | ❌ | ❌ | ❌ | ❌ |
+| Provider failover | ✅ **5-LLM chain** | ❌ Single API | ❌ | ❌ | ❌ |
+| Dataset export | ✅ **RFQ Level-4 JSON** | ❌ Raw JSON | ❌ | ❌ | ❌ |
+| Schema validation | ✅ **Array/class/relation checks** | ❌ | ❌ | ❌ | ❌ |
+| Quality scoring | ✅ **Per-page 0-100** | ❌ | ❌ | ❌ | ❌ |
+| QA overlays | ✅ **BBox + class + arrows** | ❌ | ❌ | ❌ | ❌ |
+| Free-tier optimized | ✅ **Quota-checked** | ⚠️ 1k free/month | ✅ Free | ✅ Free | ✅ Free (local) |
+
+> **Legend:** ✅ = supported · ⚠️ = partial · ❌ = not supported
+
 ---
 
 ## Architecture
 
 ```mermaid
-graph TD
-    A["PDF Input"] --> B["PyMuPDF Render<br/>150 DPI → JPEG"]
-    B --> C["Google Cloud Vision<br/>DOCUMENT_TEXT_DETECTION"]
-    C --> D["Raw OCR Blocks<br/>boxes + text"]
-    D --> E{"Picture Detection"}
-    E --> F["Embedded PDF Images<br/>PyMuPDF extraction"]
-    E --> G["OpenCV Contours<br/>threshold=240, min_area=3000"]
-    F --> H["Augmented Blocks"]
-    G --> H
-    H --> I["LLM Proofread Chain"]
-    I --> J{"Provider<br/>Available?"}
-    J -->|"Yes"| K["Vision LLM<br/>Gemini / GLM / IAMHC"]
-    J -->|"No"| L["Text-only LLM<br/>OpenRouter / Groq"]
-    K --> M["Full Level 4<br/>classes + order + relations + LaTeX"]
-    L --> N["Level 3 (degraded)<br/>classes + order only"]
-    M --> O["JSON Annotation<br/>per page"]
-    N --> O
-    O --> P["Validation + Scoring"]
-    P --> Q["QA Overlay Images<br/>boxes + labels + arrows"]
-    P --> R["HTML Quality Report<br/>per-page breakdown"]
-    P --> S["Usage Log<br/>+ Quota Dashboard"]
+%%{init: {"flowchart": {"defaultRenderer": "elk", "htmlLabels": true}} }%%
+graph TB
+    subgraph Input["📄 Input"]
+        A["PDF Document"] --> B["PyMuPDF Render<br/>150 DPI → JPEG"]
+    end
+
+    subgraph OCR["👁️ OCR Stage"]
+        B --> C["Google Cloud Vision<br/>DOCUMENT_TEXT_DETECTION"]
+        C --> D["Paragraph blocks<br/>boxes + text"]
+    end
+
+    subgraph Detect["🔲 Picture Detection"]
+        D --> E{"Has embedded<br/>images?"}
+        E -->|Yes| F["PyMuPDF extraction"]
+        E -->|No| G["OpenCV contours<br/>threshold=240, min=3000px"]
+        F --> H["Merge all<br/>detected regions"]
+        G --> H
+    end
+
+    subgraph LLM["🤖 LLM Proofread"]
+        H --> I["Build prompt<br/>with blocks + images"]
+        I --> J{"Try primary<br/>provider"}
+        J -->|Success| K["Parse JSON<br/>response"]
+        J -->|Fail| L["Next provider<br/>in failover chain"]
+        L --> J
+        K --> M{"Vision or<br/>text-only?"}
+        M -->|Vision| N["Level 4 output<br/>classes + order + relations + LaTeX"]
+        M -->|Text-only| O["Level 3 output<br/>classes + order only"]
+    end
+
+    subgraph Export["📦 Export & QA"]
+        N --> P["Per-page JSON<br/>annotation"]
+        O --> P
+        P --> Q["Schema validation<br/>+ quality scoring"]
+        Q --> R["QA overlay images<br/>boxes + labels + arrows"]
+        Q --> S["HTML quality report<br/>per-page breakdown"]
+    end
 ```
 
-### Data Flow
+### OCR Pipeline Flow
 
 ```mermaid
 sequenceDiagram
-    participant PDF
-    participant Render
-    participant OCR
-    participant Detect
-    participant LLM
-    participant Export
+    participant PDF as PDF Document
+    participant Render as PyMuPDF Render
+    participant GCV as Google Cloud Vision
+    participant Detect as Picture Detector
+    participant LLM as LLM Chain
+    participant Valid as Validator
+    participant Export as Exporter
 
-    PDF->>Render: Input PDF
-    Render->>Render: Render pages at 150 DPI
-    Render->>OCR: Page JPEGs
-    OCR->>OCR: Google Cloud Vision OCR
-    OCR->>Detect: Paragraph blocks [boxes + text]
-    Detect->>Detect: Embedded images + CV contours
-    Detect->>LLM: Augmented blocks
-    LLM->>LLM: Try primary → failover chain
-    LLM->>LLM: Classify, order, relate, LaTeX
-    LLM->>Export: Per-page JSON
-    Export->>Export: Validate, score, overlay, report
+    PDF->>Render: Input PDF file
+    Render->>Render: Render pages @ 150 DPI
+    Render->>GCV: Page JPEGs
+    GCV->>GCV: DOCUMENT_TEXT_DETECTION
+    GCV->>Detect: Paragraph blocks [boxes + text]
+    Detect->>Detect: Extract embedded images
+    Detect->>Detect: OpenCV contour detection
+    Detect->>LLM: Augmented blocks + regions
+    LLM->>LLM: Try primary provider
+    LLM->>LLM: Failover if provider fails
+    LLM->>LLM: Classify, order, relate, generate LaTeX
+    LLM->>Valid: Raw annotation JSON
+    Valid->>Valid: Check array lengths
+    Valid->>Valid: Validate classes & boxes
+    Valid->>Valid: Detect duplicates & overlaps
+    Valid->>Valid: Score (0-100) per category
+    Valid->>Export: Validated annotations
+    Export->>Export: Write JSON files
+    Export->>Export: Generate QA overlays
+    Export->>Export: Build HTML report
 ```
 
-### Provider Failover
+### Provider Failover Flow
 
 ```mermaid
-graph LR
-    A["Primary Provider"] --> B{"Success?"}
-    B -->|"Yes"| C["✓ Annotated JSON"]
-    B -->|"No"| D["Next Provider in Chain"]
-    D --> E{"Success?"}
-    E -->|"Yes"| C
-    E -->|"No"| F["... continues chain"]
-    F --> G["Level 2 fallback<br/>if all providers fail"]
+graph TB
+    START["📤 Submit batch<br/>to primary provider"] --> CHECK{"Provider<br/>available?"}
+    CHECK -->|"Quota OK"| SEND["Send API request"]
+    CHECK -->|"Quota exceeded"| NEXT["⏩ Next provider"]
+    SEND --> RESULT{"Success?"}
+    RESULT -->|"✅ JSON parsed"| DONE["Return annotations"]
+    RESULT -->|"❌ Error / timeout"| RETRY{"Retries<br/>left?"}
+    RETRY -->|"Yes"| SEND
+    RETRY -->|"No"| NEXT
+    NEXT --> LAST{"Last<br/>provider?"}
+    LAST -->|"No"| CHECK
+    LAST -->|"Yes"| FALLBACK["📄 Level-2 fallback<br/>raw OCR only"]
 ```
+
+### Validation Flow
+
+```mermaid
+graph TD
+    A["Annotation JSON"] --> B["Required fields<br/>image, block_boxes,<br/>block_classes, block_text"]
+    B --> C{"All present?"}
+    C -->|No| ERR1["❌ Error: missing field"]
+    C -->|Yes| D["Array lengths match<br/>boxes == classes == text"]
+    D --> E{"Equal length?"}
+    E -->|No| ERR2["❌ Error: length mismatch"]
+    E -->|Yes| F["Box validation<br/>x2>x1, y2>y1, area≥500"]
+    F --> G["Class validation<br/>all in VALID_CLASSES_SET"]
+    G --> H["Duplicate detection<br/>boxes, text"]
+    H --> I["Overlap detection<br/>>50% overlap → warning"]
+    I --> J["Level 4 checks<br/>reading_order, relations"]
+    J --> K["Quality scoring<br/>0-100 per category"]
+    K --> L["✅ Validated + Scored"]
+
+---
+
+## Example Transformation
+
+### From raw PDF to structured dataset
+
+```
+┌──────────────────┐
+│   Input PDF      │  Scanned document (150 DPI)
+│   (scanned)      │
+└────────┬─────────┘
+         ↓
+┌──────────────────┐
+│   Google Vision  │  Paragraph-level bounding boxes + text
+│   OCR            │  ~0.07s per page
+└────────┬─────────┘
+         ↓
+┌──────────────────┐
+│   Picture Detect │  Embedded images + OpenCV contours
+│   + Validate     │  Flag empty blocks, check schema
+└────────┬─────────┘
+         ↓
+┌──────────────────┐
+│   LLM Proofread  │  13-class classification, reading order,
+│   (Level 4)      │  caption relations, LaTeX generation
+└────────┬─────────┘
+         ↓
+┌──────────────────┐
+│   Validate +     │  Array-length checks, duplicate/overlap
+│   Score + QA     │  detection, per-page 0-100 scores
+└────────┬─────────┘
+         ↓
+┌──────────────────┐
+│   RFQ Level‑4    │  Structured JSON + QA overlays +
+│   Dataset        │  HTML report
+└──────────────────┘
+```
+
+### Before vs After
+
+| Aspect | Raw OCR (Level 1) | Annotated (Level 4) |
+|---|---|---|
+| Block labels | None | `Title`, `Text`, `Table`, `Caption`, `Picture`, … |
+| Reading order | Page order | Natural reading sequence |
+| Relations | None | `caption_of_figure`, `table_has_caption`, … |
+| Tables | Raw text | `\begin{tabular}...\end{tabular}` |
+| Formulas | Raw text | `\frac{...}{...}` LaTeX |
+| Validation | None | Schema checks + quality scores |
+| Visualization | None | Color-coded overlays + arrows |
 
 ---
 
@@ -215,6 +409,8 @@ Vision-capable providers (Gemini, GLM, IAMHC) produce full Level 4 output with `
 
 - **Python 3.10+**
 - **API keys** — at least Google Cloud Vision + one LLM provider (see [Configuration](#configuration))
+
+> 💡 **Tip:** You only need **2 keys** to get started: `GOOGLE_VISION_KEY` (free tier) and `GEMINI_API_KEY` (free tier). The other providers are optional fallbacks.
 
 ### From source
 
@@ -300,7 +496,8 @@ cp .env.example .env
 | `OPENROUTER_API_KEY` | Optional | OpenRouter (free tier) |
 | `GROQ_API_KEY` | Optional | Groq (free tier) |
 
-The `.env` file is auto-loaded from the project root. Fallback variable names are accepted (e.g., `GOOGLE_VISION_API_KEY` also works for Vision).
+> 📁 The `.env` file is auto-loaded from the project root (no manual `export` needed).  
+> 🔄 Fallback variable names are accepted — e.g., `GOOGLE_VISION_API_KEY` also works for Vision.
 
 ### Configuration file
 
@@ -379,6 +576,46 @@ python indic_ocr_pipeline3.py \
 | `--zip` | flag | — | Create submission ZIP archive |
 
 > **Note on batch size:** Larger batches reduce total API calls but increase per-request tokens. If you see truncated JSON responses, reduce `--batch-size`.
+
+### Common Workflows
+
+```bash
+# 📄 Quick annotation (single PDF, default settings)
+python indic_ocr_pipeline3.py --pdf doc.pdf --lang odia --out ./output
+
+# 🏭 Batch production run (with validation + report + ZIP)
+python indic_ocr_pipeline3.py \
+    --pdf doc.pdf --lang tamil --out ./output \
+    --level 4 --batch-size 5 \
+    --validate --report --zip
+
+# 🔄 Retry with a different primary provider
+python indic_ocr_pipeline3.py \
+    --pdf doc.pdf --lang marathi --out ./output \
+    --provider glm --level 4
+
+# 🎯 Sample-based annotation (process every 5th page)
+python indic_ocr_pipeline3.py \
+    --pdf doc.pdf --lang odia --out ./output \
+    --samples 5
+
+# 📋 First N pages only (preview before full run)
+python indic_ocr_pipeline3.py \
+    --pdf doc.pdf --lang telugu --out ./output \
+    --max-pages 3 --validate --report
+
+# 🧹 With preprocessing for poor-quality scans
+python indic_ocr_pipeline3.py \
+    --pdf doc.pdf --lang odia --out ./output \
+    --preprocess --qa
+
+# 🐳 Docker (mount input/output volumes)
+docker compose run --rm pipeline \
+    --pdf /app/input/doc.pdf \
+    --lang odia \
+    --out /app/output \
+    --level 4 --validate --report
+```
 
 ### Interactive CLI
 
@@ -488,7 +725,7 @@ output/
 
 ### Annotation JSON schema
 
-Each annotation JSON file contains these fields:
+Each page produces one JSON file in `annotations/`. Arrays are **parallel** — index `i` in each array corresponds to the same block.
 
 ```json
 {
@@ -505,31 +742,34 @@ Each annotation JSON file contains these fields:
   ],
   "block_text": [
     "Chapter 3: ଓଡ଼ିଆ ସାହିତ୍ୟ",
-    "ଓଡ଼ିଆ ସାହିତ୍ୟର ଇତିହାସ ବହୁ ପୁରାତନ...",
+    "ଓଡ଼ିଆ ସାହିତ୍ୟର ଇତିହାସ...",
     ""
   ],
   "reading_order": [0, 2, 1],
   "block_relations": [
     {"source": 0, "target": 1, "relation": "caption_of_figure"}
   ],
-  "annotation_quality": "full_level4"
+  "annotation_quality": "full_level4",
+  "_ro_source": "llm"
 }
 ```
 
+> **Tip:** Fields marked `_` prefix are metadata. `reading_order` and `block_relations` appear only at Level 3+ and Level 4 respectively.
+
 ### Field reference
 
-| Field | Level | Type | Description |
-|---|---|---|---|
-| `image` | 1+ | `string` | Page image filename (e.g., `page_0001.jpg`) |
-| `block_boxes` | 1+ | `[[x1,y1,x2,y2], ...]` | Bounding boxes in pixel coordinates — one per block, same order as OCR output |
-| `block_classes` | 3+ | `[string, ...]` | RFQ class label per block (see taxonomy below) |
-| `block_text` | 1+ | `[string, ...]` | Transcribed text per block; empty string for pictures; LaTeX for tables/formulas at level 4 |
-| `reading_order` | 3+ | `[int, ...]` | Permutation reordering the arrays into natural reading sequence |
-| `block_relations` | 4 | `[{source, target, relation}]` | Directed relation edges between blocks |
-| `annotation_quality` | 4 | `string` | `"full_level4"` or `"degraded_text_only_fallback"` |
-| `_ro_source` | 3 | `string` | Source of reading order: `"llm"`, `"geometry"`, or `"default"` |
+| Field | Level | Required | Type | Description |
+|---|---|---|---|---|
+| `image` | 1+ | ✅ | `string` | Page image filename (e.g., `page_0001.jpg`) |
+| `block_boxes` | 1+ | ✅ | `[[x1,y1,x2,y2], …]` | Bounding boxes in pixel coordinates — one per block |
+| `block_classes` | 3+ | ✅ | `[string, …]` | RFQ class label per block |
+| `block_text` | 1+ | ✅ | `[string, …]` | Transcribed text; `""` for pictures; LaTeX for tables/formulas |
+| `reading_order` | 3+ | ❌ | `[int, …]` | Permutation reordering arrays into reading sequence |
+| `block_relations` | 4 | ❌ | `[{source, target, relation}]` | Directed relation edges between blocks |
+| `annotation_quality` | 4 | ❌ | `string` | `"full_level4"` or `"degraded_text_only_fallback"` |
+| `_ro_source` | 3 | ❌ | `string` | Reading order source: `"llm"`, `"geometry"`, or `"default"` |
 
-All arrays have the same length — enforced by validation.
+> ⚠️ **All required arrays must have the same length.** This is enforced by `validate_page()` in `indic_ocr_pipeline/layout/validator.py`.
 
 ### Class taxonomy (13 classes)
 
@@ -631,39 +871,45 @@ indic-ocr-pipeline/
 
 ## Performance Benchmarks
 
-> ⚠️ **No pre-computed benchmarks exist.** Performance data is collected per-run from live provider calls and logged to `metrics.jsonl`. The section below describes what is measured, not fixed results.
+> 🚧 **Future Work — No pre-computed benchmarks yet.**  
+> Performance data is collected per-run from live provider calls and logged to `metrics.jsonl`. Standardized benchmarks across all providers with reproducible test PDFs are planned.
 
-### Metrics collected per run
+### What gets measured
 
-- **OCR latency** — time per page for Google Cloud Vision
-- **LLM latency** — time per batch per provider (with retries)
-- **Token counts** — input and output tokens per provider call
-- **Success rates** — per-provider pass/fail counts
-- **Stage timing** — render → OCR → detect → proofread → export
+| Metric | Source | Description |
+|---|---|---|
+| **OCR latency** | Google Cloud Vision API | Time per page for paragraph detection |
+| **LLM latency** | Per-provider API calls | Time per batch (including retries) |
+| **Token counts** | Provider response headers | Input + output tokens per call |
+| **Success rates** | Pipeline metrics | Pass/fail per provider per batch |
+| **Stage timing** | `runner.py` timestamps | Render → OCR → Detect → Proofread → Export |
 
 ### How to view your results
 
 ```bash
-# After a run, check the CLI summary output
+# After a run, check the terminal summary
 python indic_ocr_pipeline3.py --pdf doc.pdf --lang odia --out ./output
 
-# View the HTML report (--report flag)
+# Open the HTML report (requires --report flag)
 open output/report/index.html
 
-# Inspect raw timing data
+# Inspect raw per-request timing data
 cat output/logs/metrics.jsonl
 
-# Query metrics via API
+# Query through the API
 curl http://localhost:8000/metrics
 ```
 
-Results vary by:
-- **Provider** — vision providers are 2–3× slower than text-only
-- **Batch size** — larger batches reduce per-page overhead but risk truncation
-- **Document complexity** — dense layouts with many blocks increase token usage
-- **Network latency** — varies by provider endpoint and geographic region
+### Variables affecting performance
 
-Benchmarking with standardized test PDFs across all providers is planned. See [Roadmap](#roadmap).
+| Factor | Impact | Mitigation |
+|---|---|---|
+| **Vision vs text-only** | Vision providers 2–3× slower | Use Gemini (fastest vision) for primary |
+| **Batch size** | Larger batches = less overhead | Balance: 3–5 pages typically optimal |
+| **Document density** | More blocks = more tokens | Reduce `--batch-size` for dense pages |
+| **Network latency** | Varies by provider region | Choose geo-closest provider endpoint |
+
+> Standardized benchmarks using fixed test PDFs across all 5 providers is a planned feature. See [Roadmap](#roadmap).
 
 ---
 
@@ -746,6 +992,44 @@ Standard OCR returns raw text. This pipeline returns **structured annotations**:
 
 A document-layout annotation standard that includes block-level class labels, natural reading order, caption relations, and LaTeX markup. This is the format used to train document-layout AI models.
 
+### Why Google Cloud Vision specifically?
+
+Google Cloud Vision offers the best **free-tier OCR quality for Indic scripts** (1,000 pages/month). It supports all 12 major Indic languages natively with paragraph-level bounding boxes, which few free alternatives match.
+
+### Why multiple LLM providers instead of one?
+
+Free-tier LLMs have **daily quotas and rate limits**. By chaining 5 providers (Gemini → GLM → IAMHC → OpenRouter → Groq), the pipeline achieves higher effective throughput than any single provider alone. When Gemini hits its 429 limit, GLM takes over, and so on.
+
+### Can I use a local OCR engine like Tesseract?
+
+Not currently. The pipeline only supports **Google Cloud Vision OCR**. Adding Tesseract or other backends is on the [Roadmap](#roadmap).
+
+### Does this require a GPU?
+
+**No.** All computation happens via cloud APIs (Google Cloud Vision + LLM providers). The local machine only runs PyMuPDF for PDF rendering and OpenCV for preprocessing/overlays — both CPU-only.
+
+### What are the free-tier limits I should expect?
+
+| Provider | Limit | Reset |
+|---|---|---|
+| Google Cloud Vision | 1,000 pages/month | Monthly billing cycle |
+| Gemini 2.5 Flash Lite | ~1,500 requests/day | Midnight (America/Los_Angeles) |
+| GLM-4V Flash | Rate-limited | Varies |
+| OpenRouter (free) | Rate-limited | Varies |
+| Groq | 30 RPM / 6k TPM / 1k RPD | Rolling window |
+
+### What dataset formats can I export?
+
+Currently **RFQ Level-4 JSON** (one file per page). Future formats include COCO, DocLayNet, and HuggingFace Dataset. See [Roadmap](#roadmap).
+
+### How do I know my output is correct?
+
+Every page goes through `validate_page()` which checks: array length consistency, class validity, box geometry, overlap percentages, duplicate detection, relation integrity, and missing captions. Results are surfaced in the HTML report and QA overlays.
+
+### Can I process PDFs with mixed languages?
+
+The `--lang` flag sets a single primary language. Mixed-language documents (e.g., Odia with English citations) are supported — Google Cloud Vision auto-detects additional scripts.
+
 ---
 
 ## Troubleshooting
@@ -818,4 +1102,10 @@ This project is licensed under the [MIT License](LICENSE).
 
 <div align="center">
   <sub>Built with PyMuPDF, OpenCV, Google Cloud Vision, and free-tier LLM APIs.</sub>
+  <br/>
+  <sub>
+    If you find this project useful,
+    <a href="https://github.com/rai8053/indic-ocr-pipeline">⭐ star it on GitHub</a>
+    and consider <a href="CONTRIBUTING.md">contributing</a>.
+  </sub>
 </div>
