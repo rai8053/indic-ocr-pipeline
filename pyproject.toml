@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=64", "wheel"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "indic-ocr-pipeline"
@@ -43,7 +43,7 @@ repository = "https://github.com/rai8053/indic-ocr-pipeline"
 changelog = "https://github.com/rai8053/indic-ocr-pipeline/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
-packages = {find = {include = ["indic_ocr*", "core*", "layout*", "utils*", "validation*", "preprocessing*", "qa*", "report*", "pipeline*"]}}
+packages = {find = {include = ["indic_ocr*"]}}
 
 [tool.black]
 line-length = 100
