@@ -122,45 +122,46 @@ The key insight is that **free-tier API limits can be managed through provider d
 
 ## Pipeline Preview
 
-<div align="center">
-  <table>
-    <tr>
-      <td align="center"><strong>Input PDF</strong></td>
-      <td align="center"><strong>OCR + Bounding Boxes</strong></td>
-      <td align="center"><strong>RFQ Level‑4 Annotation</strong></td>
-    </tr>
-    <tr>
-      <td><img src="docs/images/pipeline-input.png" alt="Input PDF page" width="100%"/></td>
-      <td><img src="docs/images/pipeline-ocr.png" alt="OCR with bounding boxes" width="100%"/></td>
-      <td><img src="docs/images/pipeline-annotated.png" alt="Annotated layout with classes" width="100%"/></td>
-    </tr>
-    <tr>
-      <td align="center"><em>Scanned Odia PDF page</em></td>
-      <td align="center"><em>Google Vision paragraphs + boxes</em></td>
-      <td align="center"><em>Classified blocks, reading order, relations</em></td>
-    </tr>
-  </table>
-</div>
+The pipeline transforms each scanned page through 5 stages, producing validated RFQ Level-4 JSON at the end:
 
-<div align="center">
-  <table>
-    <tr>
-      <td align="center"><strong>QA Overlay</strong></td>
-      <td align="center"><strong>Reading Order Arrows</strong></td>
-      <td align="center"><strong>HTML Quality Report</strong></td>
-    </tr>
-    <tr>
-      <td><img src="docs/images/qa-overlay.png" alt="QA overlay with class colors" width="100%"/></td>
-      <td><img src="docs/images/reading-order.png" alt="Reading order arrows" width="100%"/></td>
-      <td><img src="docs/images/quality-report.png" alt="HTML quality report dashboard" width="100%"/></td>
-    </tr>
-    <tr>
-      <td align="center"><em>Colored boxes per class</em></td>
-      <td align="center"><em>Arrow overlay for order</em></td>
-      <td align="center"><em>Per-page score breakdown</em></td>
-    </tr>
-  </table>
-</div>
+| Stage | Input → Output |
+|-------|----------------|
+| **1. PDF Rendering** | Scanned PDF → JPEG image at `--dpi` resolution (via PyMuPDF) |
+| **2. Google Cloud OCR** | JPEG → bounding boxes (`block_boxes`) + regional text (`block_text`) |
+| **3. Layout Classification** | OCR blocks → 13 RFQ class labels (`block_classes`) + reading order (`reading_order`) |
+| **4. Relation Extraction** | Classified blocks → caption/footnote/table links (`block_relations`) |
+| **5. QA & Validation** | Annotation → schema validation + quality score + color-coded overlay |
+
+Below is how the intermediate data evolves through stages 2→5 for a scanned Odia page:
+
+**Stage 2 — Raw OCR:**
+```json
+{
+  "image": "page_0001.jpg",
+  "block_boxes": [[72, 98, 540, 142], [72, 155, 540, 482], [72, 495, 260, 540]],
+  "block_text": ["Chapter 3: ଓଡ଼ିଆ ସାହିତ୍ୟ", "ଓଡ଼ିଆ ସାହିତ୍ୟର ଇତିହାସ...", ""]
+}
+```
+
+**Stages 3–4 — Layout + Relations:**
+```json
+{
+  "block_classes": ["Page-header", "Text", "Picture"],
+  "reading_order": [0, 2, 1],
+  "block_relations": [{"source": 0, "target": 1, "relation": "caption_of_figure"}]
+}
+```
+
+**Stage 5 — Validated annotation:**
+```json
+{
+  "annotation_quality": "full_level4",
+  "_qa_score": 0.92,
+  "_ro_source": "llm"
+}
+```
+
+> 💡 All stages are combined into a single JSON file per page. The full schema is documented in [Output Format](#output-format).
 
 ---
 
@@ -194,42 +195,13 @@ The key insight is that **free-tier API limits can be managed through provider d
 └─────────────┘
 ```
 
-<div align="center">
-  <table>
-    <tr>
-      <td align="center"><strong>Step 1: Input PDF</strong></td>
-      <td align="center"><strong>Step 2: OCR Output</strong></td>
-      <td align="center"><strong>Step 3: Layout Detection</strong></td>
-    </tr>
-    <tr>
-      <td><img src="docs/images/example-input.png" alt="Input PDF page" width="100%"/></td>
-      <td><img src="docs/images/example-ocr.png" alt="OCR bounding boxes overlay" width="100%"/></td>
-      <td><img src="docs/images/example-layout.png" alt="Layout classes colored by type" width="100%"/></td>
-    </tr>
-    <tr>
-      <td align="center"><em>Raw scanned page</em></td>
-      <td align="center"><em>Paragraph boxes + text</em></td>
-      <td align="center"><em>13-class RFQ labels</em></td>
-    </tr>
-  </table>
-</div>
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center"><strong>Step 4: Final JSON</strong></td>
-      <td align="center"><strong>Step 5: QA Visualization</strong></td>
-    </tr>
-    <tr>
-      <td><img src="docs/images/example-json.png" alt="JSON annotation preview" width="100%"/></td>
-      <td><img src="docs/images/example-visualization.png" alt="Color-coded QA overlay with arrows" width="100%"/></td>
-    </tr>
-    <tr>
-      <td align="center"><em>RFC Level‑4 JSON structure</em></td>
-      <td align="center"><em>Boxes + classes + order arrows</em></td>
-    </tr>
-  </table>
-</div>
+| Step | Data produced | Description |
+|------|--------------|-------------|
+| **1. Input PDF** | JPEG rendered page | Scanned document page → RGB image at `--dpi` px/in |
+| **2. OCR Output** | `block_boxes` + `block_text` | Paragraph bounding boxes + text (returned by Google Cloud Vision) |
+| **3. Layout Detection** | `block_classes` + `reading_order` | 13-class RFQ labels (`Page-header`, `Text`, `Picture`, etc.) + sequence |
+| **4. Final JSON** | Full page annotation | All fields merged into per-page `<prefix>_page_NNNN.json` file |
+| **5. QA Visualization** | Overlay + quality report | Color-coded block overlay + per-page `_qa_score` + optional HTML report |
 
 ---
 
@@ -517,10 +489,14 @@ This section shows a concrete transformation from a raw scanned PDF through the 
 
 ### What changes
 
-| Raw OCR page | Annotated page |
-|---|---|
-| <img src="docs/images/example-input.png" alt="Raw input" width="100%"/> | <img src="docs/images/example-visualization.png" alt="Annotated output" width="100%"/> |
-| *Plain bounding boxes — no semantics* | *Colored class labels + arrows + JSON* |
+| Dimension | Raw OCR (Google Vision) | Annotated JSON (Level 4) |
+|-----------|------------------------|--------------------------|
+| **Blocks** | Plain bounding boxes | 13-class RFQ labels (`Page-header`, `Text`, `Picture`, `Footnote`, `Table`, etc.) |
+| **Order** | Top-to-bottom scan order | Explicit `reading_order` sequence |
+| **Relations** | None | `block_relations` (`caption_of_figure`, `footnote_to_body`, `table_caption`) |
+| **Text** | Raw transcription | Cleaned text + optional LaTeX |
+| **Validation** | Unvalidated | Schema check + `_qa_score` + relation integrity |
+| **Output** | Per-page JSON with 3 fields | 15+ fields including metadata, provenance, and quality metrics |
 
 ---
 
