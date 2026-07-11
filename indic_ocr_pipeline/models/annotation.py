@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -65,7 +65,7 @@ class Block:
     class_label: str = "Text"
     block_text: str = ""
     is_picture: bool = False
-    reading_order_index: Optional[int] = None
+    reading_order_index: int | None = None
 
 
 @dataclass
@@ -86,9 +86,9 @@ class PageAnnotation:
     block_boxes: list[list[int]] = field(default_factory=list)
     block_classes: list[str] = field(default_factory=list)
     block_text: list[str] = field(default_factory=list)
-    reading_order: Optional[list[int]] = None
-    block_relations: Optional[list[dict[str, Any]]] = None
-    annotation_quality: Optional[str] = None
+    reading_order: list[int] | None = None
+    block_relations: list[dict[str, Any]] | None = None
+    annotation_quality: str | None = None
 
 
 @dataclass

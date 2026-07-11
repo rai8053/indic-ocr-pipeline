@@ -1,19 +1,25 @@
-import os, sys, subprocess, zipfile, re, shutil, time
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+import zipfile
 from pathlib import Path
 
+from indic_ocr_pipeline.utils.config import QUOTA_STATE_FILE
 from indic_ocr_pipeline.utils.helpers import (
+    _get_console,
     banner,
-    rule,
+    bold,
+    err,
     info,
     ok,
-    warn,
-    err,
-    bold,
     raw,
-    _get_console,
+    rule,
+    warn,
 )
-from indic_ocr_pipeline.utils.config import QUOTA_STATE_FILE
-from indic_ocr_pipeline.utils.usage import UsageTracker, PROVIDER_INFO
+from indic_ocr_pipeline.utils.usage import UsageTracker
 
 BASE = Path(__file__).resolve().parent
 PIPELINE = BASE / "indic_ocr_pipeline3.py"
@@ -129,13 +135,15 @@ class Dashboard:
         self._first_ascii = True
 
         try:
-            from rich.console import Console as _RC
+            from rich.console import Group as _RGroup
             from rich.live import Live as _RL
-            from rich.progress import Progress as _RP, BarColumn as _RB, TextColumn as _RTC
-            from rich.progress import TimeElapsedColumn as _RTE, TimeRemainingColumn as _RTR
+            from rich.progress import BarColumn as _RB
+            from rich.progress import Progress as _RP
+            from rich.progress import TextColumn as _RTC
+            from rich.progress import TimeElapsedColumn as _RTE
+            from rich.progress import TimeRemainingColumn as _RTR
             from rich.table import Table as _RT
             from rich.text import Text as _RText
-            from rich.console import Group as _RGroup
 
             self._has_rich = True
             self._RText = _RText
@@ -356,7 +364,7 @@ def run_for_language(lang_key, files, max_pages, settings=None):
             dashboard.update(0, total_pages, fname, "", "Rendering", stage_status)
 
             proc_env = {**os.environ, "PYTHONUNBUFFERED": "1"}
-            proc = subprocess.Popen(
+            proc = subprocess.Popen(  # noqa: S603
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -486,7 +494,7 @@ def mode_select_by_pdf(pdfs):
     for pdf in pdfs:
         lang = detect_language(pdf.name)
         pdf_options.append((pdf_label(pdf), (lang, pdf.name)))
-    print(f"\nSelect by PDF:\n")
+    print("\nSelect by PDF:\n")
     choices = choose("  PDF number(s)", pdf_options, multi=True)
     if not choices:
         return None
@@ -507,12 +515,12 @@ def mode_select_by_language(pdfs):
     sorted_langs = sorted(lang_groups.keys())
     n = len(sorted_langs)
 
-    print(f"\nSelect by language:\n")
+    print("\nSelect by language:\n")
     for i, k in enumerate(sorted_langs, 1):
         count = len(lang_groups[k])
         label = f"{LANG_DISPLAY.get(k, k.capitalize())} ({count} PDF{'s' if count != 1 else ''})"
         print(f"  [{i}] {label}")
-    print(f"  [0] All Languages")
+    print("  [0] All Languages")
 
     while True:
         try:
@@ -577,7 +585,7 @@ def show_settings(current):
         print(f"  7. ZIP Export           : {'Yes' if current['zip'] else 'No'}")
         print(f"  8. Max pages per PDF    : {current['max_pages']}  (0 = all)")
         print(f"  {'-' * 40}")
-        print(f"  0. Back to main menu")
+        print("  0. Back to main menu")
         print()
         raw = input("  Select setting to change: ").strip()
         if raw == "0":
@@ -659,7 +667,7 @@ def display_summary(stats_list):
     )
     print()
     raw(f"  [bold cyan]Output Folder[/bold cyan]        : {base_out}")
-    raw(f"  [bold cyan]QA Folder[/bold cyan]            : N/A")
+    raw("  [bold cyan]QA Folder[/bold cyan]            : N/A")
     raw(f"  [bold cyan]HTML Report[/bold cyan]          : {report_rel or 'N/A'}")
     raw(f"  [bold cyan]ZIP File[/bold cyan]             : {zip_rel or 'N/A'}")
     print()
@@ -688,18 +696,18 @@ def show_system_status(settings):
             f"    [bold cyan]Last Request[/bold cyan]     : {ts_str} | {last_req['p']} | {last_req['pg']}p"
         )
     else:
-        raw(f"    [bold cyan]Last Request[/bold cyan]     : [yellow]None yet[/yellow]")
+        raw("    [bold cyan]Last Request[/bold cyan]     : [yellow]None yet[/yellow]")
     print()
 
 
 def _check_api_key(prov):
     from indic_ocr_pipeline.utils.config import (
         GEMINI_API_KEY,
-        GOOGLE_VISION_API_KEY,
         GLM_API_KEY,
+        GOOGLE_VISION_API_KEY,
         GROQ_API_KEY,
-        OPENROUTER_API_KEY,
         IAMHC_API_KEY,
+        OPENROUTER_API_KEY,
     )
 
     _key_map = {
@@ -725,8 +733,8 @@ def show_quota_monitor(settings):
     or_usage = tracker.fetch_openrouter_official_usage(OPENROUTER_API_KEY)
 
     try:
-        from rich.table import Table
         from rich import box
+        from rich.table import Table
 
         c = _get_console()
         if c:
@@ -788,7 +796,7 @@ def show_quota_monitor(settings):
 
         if pd["has_official_usage_api"]:
             if or_usage:
-                raw(f"    Official Usage     : [green]Retrieved successfully[/green]")
+                raw("    Official Usage     : [green]Retrieved successfully[/green]")
                 if prov == "openrouter":
                     raw(f"    Credits Used       : ${or_usage.get('usage', 0):.2f}")
                     raw(
@@ -798,9 +806,9 @@ def show_quota_monitor(settings):
                     )
                     raw(f"    Reset              : {or_usage.get('limit_reset', 'N/A')}")
             else:
-                raw(f"    Official Usage     : [yellow]Not available from provider[/yellow]")
+                raw("    Official Usage     : [yellow]Not available from provider[/yellow]")
         else:
-            raw(f"    Official Usage     : [yellow]Not available from provider[/yellow]")
+            raw("    Official Usage     : [yellow]Not available from provider[/yellow]")
 
         raw(f"    Requests Today     : {t['requests']}")
         raw(f"    Requests Yesterday : {y['requests']}")
@@ -829,7 +837,7 @@ def show_quota_monitor(settings):
         if pd["has_official_quota_api"] and or_usage:
             pass  # shown above as credits remaining
         elif pd["has_official_quota_api"] and not or_usage:
-            raw(f"    Remaining Quota    : [yellow]Not available from provider[/yellow]")
+            raw("    Remaining Quota    : [yellow]Not available from provider[/yellow]")
 
         print()
 
@@ -881,18 +889,16 @@ def run_checks():
         "PyMuPDF": "pip install PyMuPDF",
     }
     optional = {"rich": "pip install rich"}
-    all_present = True
 
     for pkg, fix_cmd in packages.items():
         try:
             if pkg == "PyMuPDF":
-                import fitz
+                import fitz  # noqa: F401
             else:
                 __import__(pkg)
             _check_result("pass", f"Package: {pkg}")
         except ImportError:
             _check_result("fail", f"Package: {pkg} not found", fix_cmd)
-            all_present = False
             critical = True
 
     for pkg, fix_cmd in optional.items():
@@ -903,7 +909,7 @@ def run_checks():
             _check_result("warn", f"Package: {pkg} not found", fix_cmd)
 
     # 3. API Keys
-    from indic_ocr_pipeline.utils.config import GEMINI_API_KEY, GOOGLE_VISION_API_KEY, GLM_API_KEY
+    from indic_ocr_pipeline.utils.config import GEMINI_API_KEY, GLM_API_KEY, GOOGLE_VISION_API_KEY
 
     keys = [
         ("Google Cloud Vision", GOOGLE_VISION_API_KEY, "GOOGLE_VISION_API_KEY"),
@@ -1036,8 +1042,8 @@ def main():
             n = get_page_count(BASE / fname)
             extra = f"  ({n} pages)" if n is not None else ""
             print(f"  [{i}] {fname}{extra}")
-        print(f"  [0] Process All")
-        print(f"  [B] Back to languages")
+        print("  [0] Process All")
+        print("  [B] Back to languages")
         print()
         raw2 = input("  Select PDFs (comma/range, or 0 for all): ").strip()
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 import base64
 import re as _re
 from pathlib import Path
-from typing import Optional
 
 # ---------------------------------------------------------------------------
 # Terminal output (Rich-aware)
@@ -18,10 +17,10 @@ try:
 except ImportError:
     _HAS_RICH = False
 
-_console: Optional[_Console] = None
+_console: _Console | None = None
 
 
-def _get_console() -> Optional[_Console]:
+def _get_console() -> _Console | None:
     """Lazy-init the shared Rich console instance."""
     global _console
     if _console is None and _HAS_RICH:
@@ -115,7 +114,7 @@ def banner(title: str = "", subtitle: str = "") -> None:
         c.print(f"[blue]|[/blue]  [bold]{title}[/bold]")
         if subtitle:
             c.print(f"[blue]|[/blue]  [blue]{subtitle}[/blue]")
-        c.print(f"[blue]|[/blue]")
+        c.print("[blue]|[/blue]")
         c.print(f"[blue]+{line}+[/blue]")
     else:
         print(f"\n{'=' * 52}")
@@ -133,7 +132,7 @@ def panel(title: str = "", content: str = "", border: str = "blue") -> None:
         c.print(f"[blue]+{line}+[/blue]")
         if title:
             c.print(f"[blue]|[/blue]  [bold]{title}[/bold]")
-            c.print(f"[blue]|[/blue]")
+            c.print("[blue]|[/blue]")
         if content:
             for part in content.strip().split("\n"):
                 c.print(f"[blue]|[/blue]  {part}")

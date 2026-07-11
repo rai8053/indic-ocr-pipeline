@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +17,7 @@ def validate_and_score_pages(
     Returns:
         List of ``(json_path, validation_result, scores)`` tuples.
     """
-    from indic_ocr_pipeline.layout.validator import validate_page, score_page
+    from indic_ocr_pipeline.layout.validator import score_page, validate_page
 
     results: list[tuple[Path, dict, dict]] = []
     for j in json_files:

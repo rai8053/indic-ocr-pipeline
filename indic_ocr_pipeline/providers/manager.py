@@ -3,18 +3,20 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 import requests
 
 from indic_ocr_pipeline.utils.config import (
-    RETRY_ATTEMPTS,
-    RETRY_BACKOFF_SECONDS,
     IAMHC_API_KEY,
     IAMHC_ENDPOINT,
     IAMHC_MODEL,
+    RETRY_ATTEMPTS,
+    RETRY_BACKOFF_SECONDS,
 )
-from indic_ocr_pipeline.utils.helpers import warn as _term_warn, image_to_base64
+from indic_ocr_pipeline.utils.helpers import image_to_base64
+from indic_ocr_pipeline.utils.helpers import warn as _term_warn
 
 # ---------------------------------------------------------------------------
 # Shared HTTP retry
@@ -41,7 +43,7 @@ def _post_with_retry(
     Raises:
         RuntimeError: If all retry attempts fail.
     """
-    resp: Optional[requests.Response] = None
+    resp: requests.Response | None = None
     retries = 0
     t0 = time.time()
     for attempt in range(RETRY_ATTEMPTS):
@@ -63,7 +65,7 @@ def _post_with_retry(
         except Exception as e:
             retries += 1
             if attempt == RETRY_ATTEMPTS - 1:
-                raise RuntimeError(f"Request failed after {retries} attempts: {e}")
+                raise RuntimeError(f"Request failed after {retries} attempts: {e}") from e
             time.sleep(RETRY_BACKOFF_SECONDS * (attempt + 1))
     latency = (time.time() - t0) * 1000
     raise RuntimeError(f"Request failed after {RETRY_ATTEMPTS} attempts")
@@ -111,7 +113,7 @@ def _run_iamhc_proofread_batch(
     image_paths: list[Any],
     pages_blocks: list[list[dict]],
     level: int = 3,
-    usage_recorder: Optional[Any] = None,
+    usage_recorder: Any | None = None,
 ) -> list[dict]:
     """Run proofreading via IAMHC relay (vision-first, text-only fallback).
 
@@ -134,8 +136,8 @@ def _run_iamhc_proofread_batch(
         raise RuntimeError("IAMHC_API_KEY not set")
 
     from indic_ocr_pipeline.pipeline.orchestrator import (
-        build_vision_batch_prompt,
         build_batch_prompt,
+        build_vision_batch_prompt,
     )
 
     prompt = build_vision_batch_prompt(pages_blocks, level=level)
@@ -216,7 +218,7 @@ def _run_iamhc_proofread_batch(
                     pages=n_pages,
                     images=n_pages,
                 )
-            raise RuntimeError(f"iamhc vision+text both failed: {e} / {e2}")
+            raise RuntimeError(f"iamhc vision+text both failed: {e} / {e2}") from e
 
 
 # ---------------------------------------------------------------------------
@@ -229,7 +231,7 @@ def run_proofread_batch(
     image_paths: list[Any],
     pages_blocks: list[list[dict]],
     level: int = 3,
-    usage_recorder: Optional[Any] = None,
+    usage_recorder: Any | None = None,
 ) -> list[dict]:
     """Run a proofreading batch with automatic failover between providers.
 
@@ -278,7 +280,7 @@ def run_proofread_batch(
     elif provider == "groq":
         pass
 
-    first_error: Optional[Exception] = None
+    first_error: Exception | None = None
     for p in chain:
         if p not in _providers:
             continue

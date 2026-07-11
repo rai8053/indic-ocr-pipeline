@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import cv2
 import numpy as np
@@ -96,7 +95,7 @@ def adaptive_threshold(image: np.ndarray) -> np.ndarray:
 def preprocess_image(
     image_path: Path,
     output_path: Path,
-    ops: Optional[list[str]] = None,
+    ops: list[str] | None = None,
 ) -> Path:
     """Run a configurable sequence of preprocessing operations on an image.
 

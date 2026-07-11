@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 
 class AnnotationQuality(str, Enum):
@@ -66,4 +66,4 @@ class ValidationResult:
     class_count: int = 0
     level: int = 3
     diverse: bool = False
-    checks: Optional[dict[str, Any]] = None
+    checks: dict[str, Any] | None = None

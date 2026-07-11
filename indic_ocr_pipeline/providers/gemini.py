@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
-from indic_ocr_pipeline.utils.config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_ENDPOINT_TMPL
+from indic_ocr_pipeline.providers.manager import _parse_provider_result, _post_with_retry
+from indic_ocr_pipeline.utils.config import GEMINI_API_KEY, GEMINI_ENDPOINT_TMPL, GEMINI_MODEL
 from indic_ocr_pipeline.utils.helpers import image_to_base64
-from indic_ocr_pipeline.providers.manager import _post_with_retry, _parse_provider_result
 
 
 def run_gemini_proofread_batch(
     image_paths: list[Any],
     pages_blocks: list[list[dict]],
     level: int = 3,
-    usage_recorder: Optional[Any] = None,
+    usage_recorder: Any | None = None,
 ) -> list[dict]:
     """Run a proofreading batch via Gemini (vision + text).
 

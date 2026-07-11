@@ -10,11 +10,11 @@ import sys
 import time
 import zipfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from indic_ocr_pipeline.utils.helpers import banner, rule, info, ok, warn, err, bold, raw
 from indic_ocr_pipeline.utils.config import QUOTA_STATE_FILE
-from indic_ocr_pipeline.utils.usage import UsageTracker, PROVIDER_INFO
+from indic_ocr_pipeline.utils.helpers import banner, bold, err, info, ok, raw, rule, warn
+from indic_ocr_pipeline.utils.usage import UsageTracker
 
 BASE = Path(__file__).resolve().parent.parent
 PIPELINE = BASE / "indic_ocr_pipeline3.py"
@@ -132,13 +132,15 @@ class Dashboard:
         self._first_ascii = True
 
         try:
-            from rich.console import Console as _RC
+            from rich.console import Group as _RGroup
             from rich.live import Live as _RL
-            from rich.progress import Progress as _RP, BarColumn as _RB, TextColumn as _RTC
-            from rich.progress import TimeElapsedColumn as _RTE, TimeRemainingColumn as _RTR
+            from rich.progress import BarColumn as _RB
+            from rich.progress import Progress as _RP
+            from rich.progress import TextColumn as _RTC
+            from rich.progress import TimeElapsedColumn as _RTE
+            from rich.progress import TimeRemainingColumn as _RTR
             from rich.table import Table as _RT
             from rich.text import Text as _RText
-            from rich.console import Group as _RGroup
 
             self._has_rich = True
             self._RText = _RText
@@ -293,7 +295,7 @@ class Dashboard:
             print()
 
 
-def get_page_count(pdf_path: Path) -> Optional[int]:
+def get_page_count(pdf_path: Path) -> int | None:
     try:
         import fitz
 
@@ -320,7 +322,7 @@ def run_for_language(
     lang_key: str,
     files: list[str],
     max_pages: int,
-    settings: Optional[dict] = None,
+    settings: dict | None = None,
 ) -> dict[str, Any]:
     if settings is None:
         settings = {}
@@ -386,7 +388,7 @@ def run_for_language(
             dashboard.update(0, total_pages, fname, "", "Rendering", stage_status)
 
             proc_env = {**os.environ, "PYTHONUNBUFFERED": "1"}
-            proc = subprocess.Popen(
+            proc = subprocess.Popen(  # noqa: S603
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -395,7 +397,7 @@ def run_for_language(
                 env=proc_env,
             )
 
-            assert proc.stdout is not None
+            assert proc.stdout is not None  # noqa: S101
             for line in iter(proc.stdout.readline, ""):
                 line = line.rstrip()
 
@@ -579,18 +581,18 @@ def show_system_status(settings: dict[str, Any]) -> None:
             f"{ts_str} | {last_req['p']} | {last_req['pg']}p"
         )
     else:
-        raw(f"    [bold cyan]Last Request[/bold cyan]     : [yellow]None yet[/yellow]")
+        raw("    [bold cyan]Last Request[/bold cyan]     : [yellow]None yet[/yellow]")
     print()
 
 
 def _check_api_key(prov: str) -> bool:
     from indic_ocr_pipeline.utils.config import (
         GEMINI_API_KEY,
-        GOOGLE_VISION_API_KEY,
         GLM_API_KEY,
+        GOOGLE_VISION_API_KEY,
         GROQ_API_KEY,
-        OPENROUTER_API_KEY,
         IAMHC_API_KEY,
+        OPENROUTER_API_KEY,
     )
 
     _key_map = {
@@ -618,8 +620,8 @@ def show_quota_monitor(settings: dict[str, Any]) -> None:
     )
 
     try:
-        from rich.table import Table
         from rich import box
+        from rich.table import Table
 
         c = __import__("indic_ocr_pipeline.utils.helpers", fromlist=["_get_console"])._get_console()
         if c:
@@ -675,16 +677,16 @@ def show_quota_monitor(settings: dict[str, Any]) -> None:
 
         if pd["has_official_usage_api"]:
             if or_usage:
-                raw(f"    Official Usage     : [green]Retrieved successfully[/green]")
+                raw("    Official Usage     : [green]Retrieved successfully[/green]")
                 if prov == "openrouter":
                     raw(f"    Credits Used       : ${or_usage.get('usage', 0):.2f}")
                     if or_usage.get("limit_remaining") is not None:
                         raw(f"    Credits Remaining  : ${or_usage['limit_remaining']:.2f}")
                     raw(f"    Reset              : {or_usage.get('limit_reset', 'N/A')}")
             else:
-                raw(f"    Official Usage     : [yellow]Not available from provider[/yellow]")
+                raw("    Official Usage     : [yellow]Not available from provider[/yellow]")
         else:
-            raw(f"    Official Usage     : [yellow]Not available from provider[/yellow]")
+            raw("    Official Usage     : [yellow]Not available from provider[/yellow]")
 
         raw(f"    Requests Today     : {t['requests']}")
         raw(f"    Requests Yesterday : {y['requests']}")
@@ -716,7 +718,7 @@ def show_quota_monitor(settings: dict[str, Any]) -> None:
     print()
 
 
-def _check_result(pass_type: str, message: str, fix: Optional[str] = None) -> None:
+def _check_result(pass_type: str, message: str, fix: str | None = None) -> None:
     if pass_type == "pass":
         ok(f"  [OK] {message}")
     elif pass_type == "warn":
@@ -771,7 +773,7 @@ def run_checks() -> None:
             _check_result("warn", f"Package: {pkg} not found", fix_cmd)
 
     # API Keys
-    from indic_ocr_pipeline.utils.config import GEMINI_API_KEY, GOOGLE_VISION_API_KEY, GLM_API_KEY
+    from indic_ocr_pipeline.utils.config import GEMINI_API_KEY, GLM_API_KEY, GOOGLE_VISION_API_KEY
 
     keys = [
         ("Google Cloud Vision", GOOGLE_VISION_API_KEY, "GOOGLE_VISION_API_KEY"),
@@ -836,7 +838,7 @@ def show_settings(current: dict[str, Any]) -> dict[str, Any]:
         print(f"  7. ZIP Export           : {'Yes' if current['zip'] else 'No'}")
         print(f"  8. Max pages per PDF    : {current['max_pages']}  (0 = all)")
         print(f"  {'-' * 40}")
-        print(f"  0. Back to main menu")
+        print("  0. Back to main menu")
         print()
         raw_in = input("  Select setting to change: ").strip()
         if raw_in == "0":
@@ -942,8 +944,8 @@ def main() -> None:
             n = get_page_count(BASE / fname)
             extra = f"  ({n} pages)" if n is not None else ""
             print(f"  [{i}] {fname}{extra}")
-        print(f"  [0] Process All")
-        print(f"  [B] Back to languages")
+        print("  [0] Process All")
+        print("  [B] Back to languages")
         print()
         raw2 = input("  Select PDFs (comma/range, or 0 for all): ").strip()
 

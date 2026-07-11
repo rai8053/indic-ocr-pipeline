@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 def generate_report(
     pages: list[dict[str, Any]],
     output_path: Path,
-    usage: Optional[dict[str, Any]] = None,
+    usage: dict[str, Any] | None = None,
 ) -> Path:
     """Generate a standalone HTML quality report for annotated pages.
 
@@ -129,7 +129,9 @@ def generate_report(
                 </div>
             </div>"""
 
-    avg = lambda lst: int(sum(lst) / len(lst)) if lst else 0
+    def avg(lst):
+        return int(sum(lst) / len(lst)) if lst else 0
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>

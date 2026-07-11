@@ -6,7 +6,6 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Optional
 
 
 class PipelineLogger:
@@ -44,7 +43,7 @@ class PipelineLogger:
         """Record the start time of a named pipeline stage."""
         self._stage_times[stage] = time.time()
 
-    def end_stage(self, stage: str) -> Optional[float]:
+    def end_stage(self, stage: str) -> float | None:
         """Record the end time of a named stage and write a metric.
 
         Args:

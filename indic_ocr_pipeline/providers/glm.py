@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
-from indic_ocr_pipeline.utils.config import GLM_API_KEY, GLM_MODEL, GLM_ENDPOINT
+from indic_ocr_pipeline.providers.manager import _parse_provider_result, _post_with_retry
+from indic_ocr_pipeline.utils.config import GLM_API_KEY, GLM_ENDPOINT, GLM_MODEL
 from indic_ocr_pipeline.utils.helpers import image_to_base64
-from indic_ocr_pipeline.providers.manager import _post_with_retry, _parse_provider_result
 
 
 def run_glm_proofread_batch(
     image_paths: list[Any],
     pages_blocks: list[list[dict]],
     level: int = 3,
-    usage_recorder: Optional[Any] = None,
+    usage_recorder: Any | None = None,
 ) -> list[dict]:
     """Run a proofreading batch via GLM-4V Flash (vision-capable).
 

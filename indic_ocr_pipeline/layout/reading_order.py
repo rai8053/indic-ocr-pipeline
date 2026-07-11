@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 
 def detect_column_layout(
     boxes: list[list[float]],
@@ -35,7 +33,7 @@ def detect_column_layout(
 
 def geometry_order(
     boxes: list[list[float]],
-    page_height: Optional[float] = None,
+    page_height: float | None = None,
 ) -> list[int]:
     """Determine reading order using geometric layout analysis.
 
@@ -112,7 +110,7 @@ def correct_llm_order(
     if n != len(geo_order):
         return geo_order
 
-    diffs = sum(1 for a, b in zip(llm_order, geo_order) if a != b)
+    diffs = sum(1 for a, b in zip(llm_order, geo_order, strict=False) if a != b)
     confidence = 1.0 - (diffs / n)
 
     if confidence >= 0.8:

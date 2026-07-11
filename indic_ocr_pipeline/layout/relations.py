@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 
 def auto_relations(
     blocks: list[dict],
@@ -35,7 +33,7 @@ def auto_relations(
     for ti in table_indices:
         tb = blocks[ti]["box"]
         t_center_y = (tb[1] + tb[3]) / 2
-        best_caption: Optional[int] = None
+        best_caption: int | None = None
         best_dist = float("inf")
 
         for ci in caption_indices:

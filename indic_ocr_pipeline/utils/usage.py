@@ -7,7 +7,7 @@ import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import requests
@@ -303,7 +303,7 @@ class UsageTracker:
             for k in keys[:-max_count]:
                 del aggs[period][k]
 
-    def fetch_openrouter_official_usage(self, api_key: str) -> Optional[dict[str, Any]]:
+    def fetch_openrouter_official_usage(self, api_key: str) -> dict[str, Any] | None:
         """Fetch official usage data from OpenRouter API."""
         if not api_key:
             return None

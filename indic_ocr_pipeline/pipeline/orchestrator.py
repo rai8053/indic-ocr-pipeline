@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Optional
+from typing import Any
 
 from indic_ocr_pipeline.utils.config import (
-    VALID_CLASSES,
     NO_TEXT_IN_PICTURE_MARKER,
-    VALID_CLASSES_SET,
+    VALID_CLASSES,
 )
 from indic_ocr_pipeline.utils.helpers import warn as _term_warn
 
@@ -250,7 +249,7 @@ def _extract_json_object(raw_text: str) -> dict:
 def _parse_batch_response(
     raw_text: str,
     expected_pages: int,
-    original_blocks: Optional[list[list[dict]]] = None,
+    original_blocks: list[list[dict]] | None = None,
     level: int = 3,
 ) -> list[dict]:
     """Parse the JSON response from an LLM proofread call into page annotations.
@@ -274,10 +273,8 @@ def _parse_batch_response(
         and ``block_relations``.
     """
     parsed = _extract_json_object(raw_text)
-    pages = (
-        parsed["pages"]
-        if "pages" in parsed
-        else ([parsed] if "block_classes" in parsed and expected_pages == 1 else [])
+    pages = parsed.get(
+        "pages", [parsed] if "block_classes" in parsed and expected_pages == 1 else []
     )
     if not pages or len(pages) != expected_pages:
         raise ValueError(f"Expected {expected_pages} pages, got {len(pages)}")
@@ -285,7 +282,7 @@ def _parse_batch_response(
     result: list[dict] = []
     for page_idx, p in enumerate(pages):
         classes: list[str] = list(p.get("block_classes", []))
-        order: Optional[list[int]] = p.get("page_order", None) or p.get("reading_order", None)
+        order: list[int] | None = p.get("page_order", None) or p.get("reading_order", None)
         n = len(classes)
         relations: list[dict] = p.get("block_relations", [])
 
@@ -309,8 +306,8 @@ def _parse_batch_response(
                 classes = classes[:orig_count]
                 n = orig_count
 
-        model_texts: Optional[list[str]] = p.get("block_text", None)
-        model_boxes: Optional[list[list[int]]] = p.get("block_boxes", None)
+        model_texts: list[str] | None = p.get("block_text", None)
+        model_boxes: list[list[int]] | None = p.get("block_boxes", None)
 
         if model_texts is not None:
             if len(model_texts) < n:

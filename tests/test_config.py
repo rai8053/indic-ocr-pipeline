@@ -1,13 +1,13 @@
 """Tests for configuration module."""
 
 from indic_ocr_pipeline.utils.config import (
+    LANGUAGE_HINTS,
+    LLM_DAILY_LIMIT,
+    NO_TEXT_IN_PICTURE_MARKER,
     VALID_CLASSES,
     VALID_CLASSES_SET,
     VALID_RELATIONS,
     VISION_MONTHLY_LIMIT,
-    LLM_DAILY_LIMIT,
-    LANGUAGE_HINTS,
-    NO_TEXT_IN_PICTURE_MARKER,
 )
 
 

@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import cv2
-import numpy as np
 
 from indic_ocr_pipeline.utils.config import CLASS_COLORS, VALID_CLASSES
 

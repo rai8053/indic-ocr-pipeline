@@ -1,7 +1,5 @@
 """Tests for reading order detection."""
 
-import json
-
 
 class TestReadingOrder:
     def test_geometry_order_simple(self):

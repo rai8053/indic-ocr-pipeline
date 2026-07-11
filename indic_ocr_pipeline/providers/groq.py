@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
-from indic_ocr_pipeline.utils.config import GROQ_API_KEY, GROQ_MODEL, GROQ_ENDPOINT
-from indic_ocr_pipeline.providers.manager import _post_with_retry, _parse_provider_result
+from indic_ocr_pipeline.providers.manager import _parse_provider_result, _post_with_retry
+from indic_ocr_pipeline.utils.config import GROQ_API_KEY, GROQ_ENDPOINT, GROQ_MODEL
 
 
 def run_groq_proofread_batch(
     image_paths: list[Any],
     pages_blocks: list[list[dict]],
     level: int = 3,
-    usage_recorder: Optional[Any] = None,
+    usage_recorder: Any | None = None,
 ) -> list[dict]:
     """Run a proofreading batch via Groq (text-only).
 

@@ -11,13 +11,11 @@ Usage:
 
 import json
 import logging
-import os
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse
 
 app = FastAPI(
     title="Indic OCR Pipeline API",
@@ -122,7 +120,7 @@ async def annotate(
 
     except Exception as e:
         logger.exception("Annotation failed")
-        raise HTTPException(500, str(e))
+        raise HTTPException(500, str(e)) from e
     finally:
         import shutil
 
@@ -151,4 +149,4 @@ async def batch_annotate(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)  # noqa: S104

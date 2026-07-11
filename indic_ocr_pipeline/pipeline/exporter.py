@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import zipfile
 from pathlib import Path
-from typing import Optional
 
 
 def create_submission_zip(

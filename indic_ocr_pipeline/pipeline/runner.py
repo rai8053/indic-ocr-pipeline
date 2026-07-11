@@ -5,32 +5,30 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import time
 from pathlib import Path
-from typing import Any, Optional
 
+from indic_ocr_pipeline.layout.detector import detect_embedded_pictures, detect_picture_regions_cv
+from indic_ocr_pipeline.ocr.google_vision import run_vision_ocr
+from indic_ocr_pipeline.ocr.preprocessing import preprocess_image
+from indic_ocr_pipeline.ocr.rendering import pdf_to_images
+from indic_ocr_pipeline.pipeline.exporter import create_submission_zip
+from indic_ocr_pipeline.pipeline.metrics import format_usage_for_report, validate_and_score_pages
+from indic_ocr_pipeline.reporting.html import generate_report
+from indic_ocr_pipeline.reporting.overlay import draw_overlay
 from indic_ocr_pipeline.utils.config import (
     LANGUAGE_HINTS,
+    LLM_DAILY_LIMIT,
     NO_TEXT_IN_PICTURE_MARKER,
     QUOTA_STATE_FILE,
     VISION_MONTHLY_LIMIT,
-    LLM_DAILY_LIMIT,
 )
-from indic_ocr_pipeline.utils.usage import UsageTracker
 from indic_ocr_pipeline.utils.logging import PipelineLogger
-from indic_ocr_pipeline.ocr.rendering import pdf_to_images
-from indic_ocr_pipeline.ocr.google_vision import run_vision_ocr
-from indic_ocr_pipeline.ocr.preprocessing import preprocess_image
-from indic_ocr_pipeline.layout.detector import detect_embedded_pictures, detect_picture_regions_cv
-from indic_ocr_pipeline.reporting.html import generate_report
-from indic_ocr_pipeline.reporting.overlay import draw_overlay
-from indic_ocr_pipeline.pipeline.metrics import validate_and_score_pages, format_usage_for_report
-from indic_ocr_pipeline.pipeline.exporter import create_submission_zip
+from indic_ocr_pipeline.utils.usage import UsageTracker
 
-_tracker: Optional[UsageTracker] = None
+_tracker: UsageTracker | None = None
 
 
-def get_tracker() -> Optional[UsageTracker]:
+def get_tracker() -> UsageTracker | None:
     """Return the module-level usage tracker instance."""
     return _tracker
 
@@ -165,7 +163,7 @@ def process_pdf(
             continue
         plog.end_stage("vision_ocr")
         if not vision_result["blocks"]:
-            plog.log(f"      No text -- excluding page")
+            plog.log("      No text -- excluding page")
             img_path.unlink(missing_ok=True)
             continue
 
@@ -215,7 +213,7 @@ def process_pdf(
                 usage_recorder=_usg,
             )
             plog.log(f"      [OK] {provider} proofread completed")
-            for img_path, page_result in zip(chunk_paths, pages_out):
+            for img_path, page_result in zip(chunk_paths, pages_out, strict=False):
                 page_result["image"] = img_path.name
                 ro_source = page_result.pop("_ro_source", "llm")
                 plog.log(f"      {img_path.stem}: reading_order source={ro_source}")
@@ -342,7 +340,6 @@ def process_pdf(
 
     # ZIP creation
     if create_zip:
-        import zipfile
 
         plog.log("\n[ZIP] Creating submission...")
         zip_path = create_submission_zip(out_dir, lang, jsons, images_dir, max_samples)
@@ -352,7 +349,7 @@ def process_pdf(
     if _usg:
         _d = _usg.dashboard()
         plog.log("\n--- Free-tier headroom ---")
-        for prov, pd in _d.get("providers", {}).items():
+        for _prov, pd in _d.get("providers", {}).items():
             t = pd["today"]
             m = pd["this_month"]
             lt = pd["lifetime"]

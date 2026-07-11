@@ -4,20 +4,19 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import requests
 
 from indic_ocr_pipeline.utils.config import (
     GOOGLE_VISION_API_KEY,
-    VISION_ENDPOINT,
     RETRY_ATTEMPTS,
     RETRY_BACKOFF_SECONDS,
+    VISION_ENDPOINT,
 )
 from indic_ocr_pipeline.utils.helpers import image_to_base64
-from indic_ocr_pipeline.models.annotation import VisionResult
 
-_tracker: Optional[requests.Session] = None
+_tracker: requests.Session | None = None
 
 
 def set_tracker(session: requests.Session) -> None:
@@ -28,8 +27,8 @@ def set_tracker(session: requests.Session) -> None:
 
 def run_vision_ocr(
     image_path: Path,
-    language_hints: Optional[list[str]] = None,
-    usage_recorder: Optional[Any] = None,
+    language_hints: list[str] | None = None,
+    usage_recorder: Any | None = None,
 ) -> dict:
     """Run Google Cloud Vision OCR on a single page image.
 
@@ -103,7 +102,7 @@ def run_vision_ocr(
                         pages=1,
                         images=1,
                     )
-                raise RuntimeError(f"Vision API failed after {retries} attempts: {e}")
+                raise RuntimeError(f"Vision API failed after {retries} attempts: {e}") from e
             time.sleep(RETRY_BACKOFF_SECONDS * (attempt + 1))
     else:
         latency = (time.time() - t0) * 1000

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from indic_ocr_pipeline.utils.config import VALID_CLASSES_SET, VALID_CLASSES, VALID_RELATIONS
+from indic_ocr_pipeline.utils.config import VALID_CLASSES_SET, VALID_RELATIONS
 
 AREA_THRESHOLD: int = 500
 
@@ -292,9 +292,7 @@ def score_page(json_path: Path) -> dict:
             bad_boxes += 1
             continue
         x1, y1, x2, y2 = box
-        if not (x2 > x1 and y2 > y1):
-            bad_boxes += 1
-        elif max(box) <= 1.0:
+        if not (x2 > x1 and y2 > y1) or max(box) <= 1.0:
             bad_boxes += 1
     box_score = max(0, 100 - int((bad_boxes / max(n, 1)) * 100))
 
