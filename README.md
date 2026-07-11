@@ -134,32 +134,45 @@ The pipeline transforms each scanned page through 5 stages, producing validated 
 
 Below is how the intermediate data evolves through stages 2→5 for a scanned Odia page:
 
-**Stage 2 — Raw OCR:**
-```json
-{
-  "image": "page_0001.jpg",
-  "block_boxes": [[72, 98, 540, 142], [72, 155, 540, 482], [72, 495, 260, 540]],
-  "block_text": ["Chapter 3: ଓଡ଼ିଆ ସାହିତ୍ୟ", "ଓଡ଼ିଆ ସାହିତ୍ୟର ଇତିହାସ...", ""]
-}
-```
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><strong>Stage 2 — Raw OCR</strong></td>
+      <td align="center"><strong>Stages 3–4 — Layout + Relations</strong></td>
+      <td align="center"><strong>Stage 5 — QA Overlay</strong></td>
+    </tr>
+    <tr>
+      <td><img src="docs/images/pipeline-ocr.png" alt="OCR bounding boxes" width="100%"/></td>
+      <td><img src="docs/images/pipeline-annotated.png" alt="Classified blocks with class colors" width="100%"/></td>
+      <td><img src="docs/images/qa-overlay.png" alt="Full QA overlay with legend and arrows" width="100%"/></td>
+    </tr>
+    <tr>
+      <td align="center"><em>Gray bounding boxes from Google Vision</em></td>
+      <td align="center"><em>13-class RFQ labels with distinct colors</em></td>
+      <td align="center"><em>Reading order arrows, relations, legend</em></td>
+    </tr>
+  </table>
+</div>
 
-**Stages 3–4 — Layout + Relations:**
-```json
-{
-  "block_classes": ["Page-header", "Text", "Picture"],
-  "reading_order": [0, 2, 1],
-  "block_relations": [{"source": 0, "target": 1, "relation": "caption_of_figure"}]
-}
-```
-
-**Stage 5 — Validated annotation:**
-```json
-{
-  "annotation_quality": "full_level4",
-  "_qa_score": 0.92,
-  "_ro_source": "llm"
-}
-```
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><strong>Reading Order</strong></td>
+      <td align="center"><strong>Quality Report</strong></td>
+      <td align="center"><strong>Final JSON</strong></td>
+    </tr>
+    <tr>
+      <td><img src="docs/images/reading-order.png" alt="Reading order with numbered arrows" width="100%"/></td>
+      <td><img src="docs/images/quality-report.png" alt="Quality report with scores" width="100%"/></td>
+      <td><img src="docs/images/example-json.png" alt="JSON annotation output" width="100%"/></td>
+    </tr>
+    <tr>
+      <td align="center"><em>Numbered sequence with directional arrows</em></td>
+      <td align="center"><em>Per-page 0-100 scores per category</em></td>
+      <td align="center"><em>Full Level 4 annotation JSON</em></td>
+    </tr>
+  </table>
+</div>
 
 > 💡 All stages are combined into a single JSON file per page. The full schema is documented in [Output Format](#output-format).
 
@@ -202,6 +215,43 @@ Below is how the intermediate data evolves through stages 2→5 for a scanned Od
 | **3. Layout Detection** | `block_classes` + `reading_order` | 13-class RFQ labels (`Page-header`, `Text`, `Picture`, etc.) + sequence |
 | **4. Final JSON** | Full page annotation | All fields merged into per-page `<prefix>_page_NNNN.json` file |
 | **5. QA Visualization** | Overlay + quality report | Color-coded block overlay + per-page `_qa_score` + optional HTML report |
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><strong>Step 1: Input PDF</strong></td>
+      <td align="center"><strong>Step 2: OCR Output</strong></td>
+      <td align="center"><strong>Step 3: Layout Detection</strong></td>
+    </tr>
+    <tr>
+      <td><img src="docs/images/example-input.png" alt="Input PDF page" width="100%"/></td>
+      <td><img src="docs/images/example-ocr.png" alt="OCR bounding boxes overlay" width="100%"/></td>
+      <td><img src="docs/images/example-layout.png" alt="Layout classes colored by type" width="100%"/></td>
+    </tr>
+    <tr>
+      <td align="center"><em>Raw scanned page</em></td>
+      <td align="center"><em>Paragraph boxes + text</em></td>
+      <td align="center"><em>13-class RFQ labels</em></td>
+    </tr>
+  </table>
+</div>
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><strong>Step 4: Final JSON</strong></td>
+      <td align="center"><strong>Step 5: QA Visualization</strong></td>
+    </tr>
+    <tr>
+      <td><img src="docs/images/example-json.png" alt="JSON annotation preview" width="100%"/></td>
+      <td><img src="docs/images/example-visualization.png" alt="Color-coded QA overlay with arrows" width="100%"/></td>
+    </tr>
+    <tr>
+      <td align="center"><em>RFQ Level‑4 JSON structure</em></td>
+      <td align="center"><em>Boxes + classes + order arrows</em></td>
+    </tr>
+  </table>
+</div>
 
 ---
 
@@ -494,6 +544,23 @@ This section shows a concrete transformation from a raw scanned PDF through the 
 ```
 
 ### What changes
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><strong>Raw input page</strong></td>
+      <td align="center"><strong>Annotated output (Level 4)</strong></td>
+    </tr>
+    <tr>
+      <td><img src="docs/images/example-input.png" alt="Raw input page" width="100%"/></td>
+      <td><img src="docs/images/example-visualization.png" alt="Annotated output" width="100%"/></td>
+    </tr>
+    <tr>
+      <td align="center"><em>Plain bounding boxes — no semantics</em></td>
+      <td align="center"><em>Colored class labels + arrows + JSON</em></td>
+    </tr>
+  </table>
+</div>
 
 | Dimension | Raw OCR (Google Vision) | Annotated JSON (Level 4) |
 |-----------|------------------------|--------------------------|
