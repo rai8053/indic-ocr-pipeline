@@ -20,10 +20,13 @@
 
 ## Table of Contents
 
+- [Quick Links](#quick-links)
+- [Why This Project?](#why-this-project)
 - [Overview](#overview)
   - [The Problem](#the-problem)
   - [Research Contribution](#research-contribution)
 - [Pipeline Preview](#pipeline-preview)
+- [Example Gallery](#example-gallery)
 - [Features](#features)
   - [Core](#core)
   - [Provider Failover](#provider-failover)
@@ -31,11 +34,13 @@
   - [Preprocessing & Export](#preprocessing--export)
   - [Supported Languages](#supported-languages)
   - [Use Cases](#use-cases)
-- [Comparison with Alternatives](#comparison-with-alternatives)
+- [Feature Comparison](#feature-comparison)
 - [Architecture](#architecture)
-  - [Data Flow](#data-flow)
-  - [Provider Failover](#provider-failover-1)
+  - [OCR Pipeline Flow](#ocr-pipeline-flow)
+  - [Provider Failover Flow](#provider-failover-flow)
+  - [Validation Flow](#validation-flow)
 - [Example Transformation](#example-transformation)
+- [Before vs After](#before-vs-after)
 - [Annotation Levels](#annotation-levels)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
@@ -55,11 +60,30 @@
 
 ---
 
+## Quick Links
+
+| [⚡ Installation](#installation) | [🚀 Quick Start](#quick-start) | [📖 Usage](#usage) | [📐 Architecture](#architecture) |
+|---|---|---|---|
+| [⚙️ Configuration](#configuration) | [📦 Output Formats](#output-format) | [📊 Benchmarks](#performance-benchmarks) | [❓ FAQ](#faq) |
+| [🖼️ Gallery](#example-gallery) | [🔁 Before vs After](#before-vs-after) | [🔍 Comparison](#feature-comparison) | [🤝 Contributing](#contributing) |
+
+---
+
+## Why This Project?
+
+- **Problem** — Existing OCR tools extract raw text but lose all document structure (titles, footnotes, captions, tables). This makes the output unusable for training document-layout AI models.
+- **Indic gap** — Indic scripts (Odia, Telugu, Tamil, etc.) are underserved by commercial layout tools that focus on English and Chinese.
+- **RFQ Level 4** — A complete document-layout annotation standard: 13 class labels, reading order, caption relations, and LaTeX — all in one validated JSON format.
+- **Multi-provider validation** — 5 LLM providers in a failover chain: if one hits quota, the next takes over. This provider diversity yields higher overall throughput than any single free-tier API.
+- **Free-tier optimized** — Every API call is pre-checked against provider quotas. The pipeline costs **nothing** to run and logs headroom after each execution.
+
+---
+
 ## Overview
 
 ### The Problem
 
-Existing OCR tools extract raw text but lose document structure. Given a scanned PDF page, they return paragraphs of text but cannot tell you which block is a **title**, a **footnote**, a **table caption**, or a **figure**. This makes the output unsuitable for training document-layout AI models.
+Standard OCR tools extract raw text but lose document structure. Given a scanned PDF page, they return paragraphs of text but cannot tell you which block is a **title**, a **footnote**, a **table caption**, or a **figure**. This makes the output unsuitable for training document-layout AI models.
 
 ### Why Indic OCR Is Difficult
 
@@ -140,6 +164,75 @@ The key insight is that **free-tier API limits can be managed through provider d
 
 ---
 
+## Example Gallery
+
+### Step-by-step workflow
+
+```
+┌─────────────┐
+│  Input PDF  │  Scanned document (Odia, Marathi, Tamil, ...)
+└──────┬──────┘
+       ↓
+┌─────────────┐
+│  Google OCR │  Paragraph bounding boxes + transcribed text
+└──────┬──────┘
+       ↓
+┌─────────────┐
+│   Layout    │  Picture regions, class labels, reading order
+└──────┬──────┘
+       ↓
+┌─────────────┐
+│   Validate  │  Schema checks, quality scores, relation integrity
+└──────┬──────┘
+       ↓
+┌─────────────┐
+│    JSON     │  Per-page RFQ Level‑4 annotation
+└──────┬──────┘
+       ↓
+┌─────────────┐
+│   Overlay   │  Color-coded QA visualization with arrows
+└─────────────┘
+```
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><strong>Step 1: Input PDF</strong></td>
+      <td align="center"><strong>Step 2: OCR Output</strong></td>
+      <td align="center"><strong>Step 3: Layout Detection</strong></td>
+    </tr>
+    <tr>
+      <td><img src="docs/images/example-input.png" alt="Input PDF page" width="100%"/></td>
+      <td><img src="docs/images/example-ocr.png" alt="OCR bounding boxes overlay" width="100%"/></td>
+      <td><img src="docs/images/example-layout.png" alt="Layout classes colored by type" width="100%"/></td>
+    </tr>
+    <tr>
+      <td align="center"><em>Raw scanned page</em></td>
+      <td align="center"><em>Paragraph boxes + text</em></td>
+      <td align="center"><em>13-class RFQ labels</em></td>
+    </tr>
+  </table>
+</div>
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><strong>Step 4: Final JSON</strong></td>
+      <td align="center"><strong>Step 5: QA Visualization</strong></td>
+    </tr>
+    <tr>
+      <td><img src="docs/images/example-json.png" alt="JSON annotation preview" width="100%"/></td>
+      <td><img src="docs/images/example-visualization.png" alt="Color-coded QA overlay with arrows" width="100%"/></td>
+    </tr>
+    <tr>
+      <td align="center"><em>RFC Level‑4 JSON structure</em></td>
+      <td align="center"><em>Boxes + classes + order arrows</em></td>
+    </tr>
+  </table>
+</div>
+
+---
+
 ## Features
 
 ### Core
@@ -206,20 +299,23 @@ Languages are configured in `indic_ocr_pipeline/utils/config.py` (the `LANGUAGE_
 
 ---
 
-## Comparison with Alternatives
+## Feature Comparison
 
 | Capability | **This Project** | Google Vision | PaddleOCR | EasyOCR | Tesseract |
 |---|---|---|---|---|---|
-| Indic script support | ✅ **12 languages** | ✅ 300+ langs | ⚠️ Limited | ⚠️ Limited | ⚠️ Requires lang pack |
-| Layout classification | ✅ **13-class RFQ** | ❌ Text only | ❌ Text only | ❌ Text only | ❌ Text only |
+| Indic languages | ✅ **12 supported** | ✅ 300+ langs | ⚠️ Limited | ⚠️ Limited | ⚠️ Lang pack needed |
+| OCR engine | ✅ Google Vision | ✅ Native | ✅ Native | ✅ Native | ✅ Native |
+| Layout detection | ✅ **13-class RFQ** | ❌ Text only | ❌ Text only | ❌ Text only | ❌ Text only |
 | Reading order | ✅ **LLM + geometry** | ❌ | ❌ | ❌ | ❌ |
-| Caption relations | ✅ **5 relation types** | ❌ | ❌ | ❌ | ❌ |
-| Provider failover | ✅ **5-LLM chain** | ❌ Single API | ❌ | ❌ | ❌ |
-| Dataset export | ✅ **RFQ Level-4 JSON** | ❌ Raw JSON | ❌ | ❌ | ❌ |
-| Schema validation | ✅ **Array/class/relation checks** | ❌ | ❌ | ❌ | ❌ |
-| Quality scoring | ✅ **Per-page 0-100** | ❌ | ❌ | ❌ | ❌ |
-| QA overlays | ✅ **BBox + class + arrows** | ❌ | ❌ | ❌ | ❌ |
+| Caption relations | ✅ **5 types** | ❌ | ❌ | ❌ | ❌ |
+| RFQ Level 4 export | ✅ **Structured JSON** | ❌ Raw JSON | ❌ | ❌ | ❌ |
+| Dataset generation | ✅ **Validated + scored** | ❌ | ❌ | ❌ | ❌ |
+| Schema validation | ✅ **Array/class/box/relation** | ❌ | ❌ | ❌ | ❌ |
+| LLM proofreading | ✅ **5-provider failover** | ❌ | ❌ | ❌ | ❌ |
+| Provider failover | ✅ **gemini→glm→iamhc→openrouter→groq** | ❌ Single API | ❌ | ❌ | ❌ |
 | Free-tier optimized | ✅ **Quota-checked** | ⚠️ 1k free/month | ✅ Free | ✅ Free | ✅ Free (local) |
+| QA overlays | ✅ **BBox + color + arrows** | ❌ | ❌ | ❌ | ❌ |
+| Deployment | ✅ **CLI + Docker + FastAPI** | ✅ API only | ✅ CLI | ✅ CLI | ✅ CLI |
 
 > **Legend:** ✅ = supported · ⚠️ = partial · ❌ = not supported
 
@@ -385,6 +481,46 @@ graph TD
 | Formulas | Raw text | `\frac{...}{...}` LaTeX |
 | Validation | None | Schema checks + quality scores |
 | Visualization | None | Color-coded overlays + arrows |
+
+---
+
+## Before vs After
+
+This section shows a concrete transformation from a raw scanned PDF through the complete pipeline to a validated RFQ Level 4 dataset.
+
+```
+┌──────────────────────────┐
+│  Original Scanned PDF    │  Raw image — no machine-readable structure
+│  (e.g., Odia book page)  │
+└──────────┬───────────────┘
+           ↓
+┌──────────────────────────┐
+│  Raw OCR Output          │  Google Cloud Vision returns paragraph
+│  (Level 1)               │  boxes + text but NO class labels or order
+└──────────┬───────────────┘
+           ↓
+┌──────────────────────────┐
+│  Layout Analysis         │  LLM assigns 13-class RFQ labels and
+│  (Level 3)               │  determines natural reading order
+└──────────┬───────────────┘
+           ↓
+┌──────────────────────────┐
+│  Relation Extraction     │  LLM links captions ↔ figures/tables
+│  (Level 4)               │  and generates LaTeX for formulas
+└──────────┬───────────────┘
+           ↓
+┌──────────────────────────┐
+│  Validated Structured    │  JSON output with schema validation,
+│  Dataset                 │  quality scores, and QA overlays
+└──────────────────────────┘
+```
+
+### What changes
+
+| Raw OCR page | Annotated page |
+|---|---|
+| <img src="docs/images/example-input.png" alt="Raw input" width="100%"/> | <img src="docs/images/example-visualization.png" alt="Annotated output" width="100%"/> |
+| *Plain bounding boxes — no semantics* | *Colored class labels + arrows + JSON* |
 
 ---
 
@@ -679,7 +815,9 @@ docker compose --profile api up -d
 |---|---|---|---|
 | **Google Cloud Vision** | `DOCUMENT_TEXT_DETECTION` | `vision.googleapis.com` | 1,000 units/month |
 
-The pipeline uses Google Cloud Vision for paragraph-level OCR. Each page returns bounding boxes and transcribed text. No other OCR backend is currently supported.
+The pipeline uses Google Cloud Vision for paragraph-level OCR. Each page returns bounding boxes and transcribed text.
+
+> ⚠️ No other OCR backend is currently supported. Adding Tesseract or Azure OCR is on the [Roadmap](#roadmap).
 
 ### LLM Proofreading
 
