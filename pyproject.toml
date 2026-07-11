@@ -8,9 +8,7 @@ version = "0.2.0"
 description = "Extract RFQ Level 4 layout annotations from scanned Indic-language PDFs using multi-provider LLM failover"
 readme = "README.md"
 license = {text = "MIT"}
-authors = [
-    {name = "Raihan Hazra", email = "rai8053@github.com"},
-]
+authors = ["Raihan Hazra"]
 keywords = [
     "ocr", "document-layout-analysis", "indic-languages",
     "machine-learning", "data-pipeline",
