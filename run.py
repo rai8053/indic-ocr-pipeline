@@ -634,14 +634,13 @@ def show_system_status(settings):
 
 def _check_api_key(prov):
     from core.config import (GEMINI_API_KEY, GOOGLE_VISION_API_KEY, GLM_API_KEY,
-                             GROQ_API_KEY, OPENROUTER_API_KEY, IAMHC_API_KEY)
+                             GROQ_API_KEY, OPENROUTER_API_KEY)
     _key_map = {
         "vision": GOOGLE_VISION_API_KEY,
         "gemini": GEMINI_API_KEY,
         "glm": GLM_API_KEY,
         "groq": GROQ_API_KEY,
         "openrouter": OPENROUTER_API_KEY,
-        "iamhc": IAMHC_API_KEY,
     }
     return bool(_key_map.get(prov, ""))
 
@@ -656,7 +655,7 @@ def show_quota_monitor(settings):
 
     or_usage = tracker.fetch_openrouter_official_usage(OPENROUTER_API_KEY)
 
-    for prov in ["vision", "gemini", "glm", "iamhc", "groq", "openrouter"]:
+    for prov in ["vision", "gemini", "glm", "groq", "openrouter"]:
         pd = data["providers"].get(prov)
         if not pd:
             continue

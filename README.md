@@ -1,56 +1,96 @@
-# OCR PAGE
+# Indic OCR Dataset Pipeline
 
-Indic OCR Dataset Pipeline — extracts text + RFQ Level 4 layout annotations from scanned Indic-language PDFs using Google Cloud Vision OCR and a multi-provider LLM failover chain.
+Extracts text and RFQ Level 4 layout annotations from scanned Indic-language PDFs, using Google Cloud Vision OCR and a multi-provider LLM failover chain — built to run entirely within free-tier API limits.
+
+Produces training data in the format required for document-layout / OCR-parse model fine-tuning: per-page bounding boxes, class labels, transcribed text, reading order, and inter-block relations (e.g. caption ↔ table/figure).
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Setup](#setup)
+- [Providers](#providers)
+- [Usage](#usage)
+- [Output](#output)
+- [Project Structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Features
+
+- **Multi-provider LLM failover** — automatically falls through a configured provider chain if one fails or hits quota
+- **Picture region detection** — combines embedded-PDF-image extraction (PyMuPDF) with OpenCV contour detection for scanned pages, so non-text visual regions (photos, diagrams, stamps) get annotated as `Picture` blocks
+- **Reading order** — LLM-driven, with a geometry-based fallback when the LLM doesn't return one
+- **Block relations** — automatic caption↔table/figure linking, footnote references
+- **Formula/table LaTeX** — Level 4 output includes LaTeX markup for tables and formulas
+- **Schema validation** — checks array-length consistency, duplicate/overlapping boxes, missing captions, relation integrity (in-bounds indices, valid relation types)
+- **Quality scoring** — per-page OCR/layout/reading-order/relations scores plus an overall RFQ compliance score
+- **QA overlays** — visual bounding-box + class + reading-order-arrow images for manual review
+- **Usage tracking** — per-provider request/token logging with free-tier headroom reporting
+- **Quota-aware** — pre-flight checks against configured per-provider limits before spending a call
+
+---
 
 ## Requirements
 
 - Python 3.10+
-- [Poppler](https://github.com/oschwartz10612/poppler-windows/releases/) (for `pdfinfo`/`pdftoppm`)
-- [Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) (GitHub release, not Windows Store)
-- API keys for all providers you want to use
+- [Poppler](https://github.com/oschwartz10612/poppler-windows/releases/) (for `pdfinfo` / `pdftoppm`)
+- [Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) — GitHub release build, **not** the Windows Store version
+- API keys for whichever providers you enable (see [Providers](#providers))
+
+---
 
 ## Setup
 
 ```bash
-git clone <repo>
-cd ocr-page
+git clone https://github.com/rai8053/indic-ocr-pipeline.git
+cd indic-ocr-pipeline
 
-# Create virtual environment
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\activate      # Windows
+# source .venv/bin/activate  # macOS/Linux
 
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-Copy `.env.example` to `.env` and fill in your API keys:
+Copy the example env file and fill in your own keys — **never commit `.env`**:
 
 ```bash
 cp .env.example .env
 ```
 
+---
+
 ## Providers
 
-All are **free-tier** capable:
+All providers below are usable on free tiers. Limits shown are the provider's *published* free-tier caps — your pipeline's own safety limits (`VISION_MONTHLY_LIMIT`, `LLM_DAILY_LIMIT` in `core/config.py`) are typically set below these as a buffer.
 
-| Provider | Role | Limits |
+| Provider | Role | Free-tier limit |
 |---|---|---|
 | Google Cloud Vision | OCR (text extraction) | 1,000 units/month |
 | Gemini 2.5 Flash Lite | Vision LLM (primary) | ~1,500 req/day |
-| GLM-4V Flash | Vision LLM (fallback) | Rate-limited |
-| IAMHC (relay) | Vision LLM (fallback) | No known limits |
-| OpenRouter (Llama 3.3 70B) | Text-only LLM (fallback) | Free model, rate-limited |
-| Groq (Llama 3.3 70B) | Text-only LLM (last resort) | 30 RPM, 12K TPM, 1K RPD |
+| GLM-4V Flash | Vision LLM (fallback) | Rate-limited (provider-side) |
+| OpenRouter (Llama 3.3 70B, free) | Text-only LLM (fallback) | Rate-limited (provider-side) |
+| Groq (Llama 3.3 70B) | Text-only LLM (last resort) | 30 RPM · 6,000 TPM · 1,000 RPD |
 
-**Failover chain**: `gemini → glm → iamhc → openrouter → groq`
+**Failover chain:** `gemini → glm → openrouter → groq`
+
+> **Note on Level 4 fidelity across providers:** Gemini and GLM can produce full Level 4 output (table/formula LaTeX, LLM-derived reading order and relations). OpenRouter and Groq's text-only prompt path cannot generate LaTeX or reliable relations — pages processed through this fallback are tagged `"annotation_quality": "degraded_text_only_fallback"` in the output JSON, and a `[WARN]` is logged, so degraded pages can be identified and reprocessed once quota resets.
+
+---
 
 ## Usage
 
 ```bash
 # Interactive CLI (recommended)
 python run.py
+```
 
-# Direct pipeline
+```bash
+# Direct pipeline invocation
 python indic_ocr_pipeline3.py \
     --pdf path/to/document.pdf \
     --lang odia \
@@ -58,10 +98,12 @@ python indic_ocr_pipeline3.py \
     --level 4 \
     --validate \
     --report \
-    --batch-size 2 \
-    --provider iamhc
+    --batch-size 5 \
+    --provider gemini
+```
 
-# With preprocessing, QA overlays, and HTML report
+```bash
+# Full run: preprocessing, QA overlays, HTML report, validation
 python indic_ocr_pipeline3.py \
     --pdf path/to/document.pdf \
     --lang odia \
@@ -71,7 +113,7 @@ python indic_ocr_pipeline3.py \
     --qa \
     --report \
     --validate \
-    --batch-size 2
+    --batch-size 5
 ```
 
 ### Options
@@ -79,29 +121,33 @@ python indic_ocr_pipeline3.py \
 | Flag | Description |
 |---|---|
 | `--pdf` | Input PDF file |
-| `--lang` | Language code (`odia`, `telugu`, `marathi`, `tamil`, etc.) |
+| `--lang` | Language code — `hindi`, `bengali`, `gujarati`, `odia`, `assamese`, `punjabi`, `marathi`, `urdu`, `tamil`, `telugu`, `malayalam`, `kannada` |
 | `--out` | Output directory |
-| `--level` | Annotation level (3 = classes + order, 4 = + LaTeX + relations) |
-| `--provider` | LLM provider (`gemini`, `glm`, `iamhc`, `openrouter`, `groq`) |
-| `--batch-size` | Pages per LLM call (1 or 2) |
-| `--preprocess` | Apply OpenCV deskew/denoise/contrast |
+| `--level` | Annotation level — `3` (classes + boxes + reading order) or `4` (+ LaTeX + relations) |
+| `--provider` | LLM provider override — `gemini`, `glm`, `openrouter`, `groq` |
+| `--batch-size` | Pages per LLM call. Tune based on provider token limits — see note below |
+| `--preprocess` | Apply OpenCV deskew / denoise / contrast correction before OCR |
 | `--qa` | Generate visual QA overlay images |
-| `--report` | Generate HTML quality report |
+| `--report` | Generate an HTML quality report |
 | `--validate` | Run RFQ schema validation |
-| `--max-pages` | Limit number of pages to process |
+| `--max-pages` | Limit number of pages processed (useful for test runs) |
 
-## Output Structure
+> **Batch size vs. token limits:** larger batches mean fewer API calls but higher per-request token usage. If you hit truncated/malformed JSON responses on a given provider, reduce `--batch-size` for that provider — each provider's practical ceiling depends on its max output tokens (check `core/config.py` for the per-provider `max_tokens` values currently in use).
+
+---
+
+## Output
 
 ```
 output/
-├── images/          # Page images (JPEG)
-├── annotations/     # JSON per page (classes, boxes, text, relations)
-├── qa/              # Visual QA overlays (optional)
-├── logs/            # Pipeline logs
-└── report/          # HTML report (optional)
+├── images/          # Rendered page images (JPEG)
+├── annotations/     # One JSON per page: boxes, classes, text, relations
+├── qa/              # Visual QA overlays (--qa)
+├── logs/            # Pipeline run logs
+└── report/          # HTML quality report (--report)
 ```
 
-### Annotation JSON Schema
+### Annotation JSON schema
 
 ```json
 {
@@ -109,32 +155,18 @@ output/
   "block_boxes": [[x1, y1, x2, y2], ...],
   "block_classes": ["Text", "Title", "Section-header", ...],
   "block_text": ["...", ...],
-  "reading_order": [0, 3, 1, 2, ...],
+  "reading_order": [0, 3, 1, 2],
   "block_relations": [
-    {"from": 0, "to": 1, "relation": "caption_of_figure"},
-    ...
+    {"source": 0, "target": 1, "relation": "caption_of_figure"}
   ],
   "annotation_quality": "full_level4",
-  "validation_results": { "valid": true, ... }
+  "validation_results": { "valid": true }
 }
 ```
 
-### Classes
+**Classes:** `Text`, `Title`, `Section-header`, `List-item`, `TOC`, `Bibliography`, `Footnote`, `Page-header`, `Page-footer`, `Picture`, `Formula`, `Table`, `Caption`
 
-Text, Title, Section-header, List-item, TOC, Bibliography, Footnote, Page-header, Page-footer, Picture, Formula, Table, Caption
-
-## Features
-
-- **Multi-provider failover** — automatic fallback through the chain if a provider fails
-- **Picture detection** — embedded PDF images + OpenCV contour detection
-- **Reading order** — LLM-driven with geometry-based fallback
-- **Block relations** — caption↔table/figure, footnote references
-- **Formula/table LaTeX** — Level 4 generates LaTeX markup for formulas and tables
-- **Validation** — duplicate/overlap detection, missing captions, schema enforcement
-- **Scoring** — per-page OCR accuracy, reading order correctness, overall RFQ score
-- **QA overlays** — visual bounding box + class + order arrow overlays
-- **Usage tracking** — per-request recording with free-tier headroom summary
-- **Quota enforcement** — pre-flight checks against provider limits
+---
 
 ## Project Structure
 
@@ -142,10 +174,10 @@ Text, Title, Section-header, List-item, TOC, Bibliography, Footnote, Page-header
 ├── indic_ocr_pipeline3.py    # Main pipeline
 ├── run.py                    # Interactive CLI
 ├── core/
-│   └── config.py             # API keys, models, constants
+│   └── config.py             # API keys, model IDs, limits, constants
 ├── layout/
-│   ├── reading_order.py      # Geometry-based reading order
-│   └── relations.py          # Auto relation detection
+│   ├── reading_order.py      # Geometry-based reading order fallback
+│   └── relations.py          # Automatic relation detection
 ├── utils/
 │   └── usage.py              # Usage tracker + dashboard
 ├── validation/
@@ -153,7 +185,23 @@ Text, Title, Section-header, List-item, TOC, Bibliography, Footnote, Page-header
 ├── preprocessing/
 │   └── image.py              # OpenCV image preprocessing
 ├── qa/
-│   └── draw_overlay.py       # Visual QA overlays
+│   └── overlay.py            # Visual QA overlay rendering
 └── report/
     └── html_report.py        # HTML report generation
 ```
+
+---
+
+## Troubleshooting
+
+**JSON parse errors / truncated LLM responses** — usually means a batch's output exceeded the provider's `max_tokens`. Reduce `--batch-size` for that provider, or check `core/config.py` for the configured limit.
+
+**A page's `annotation_quality` is `"degraded_text_only_fallback"`** — the pipeline fell through to a text-only provider (OpenRouter/Groq) for that page, so it won't have LaTeX tables/formulas or LLM-derived relations. Reprocess that page once a higher-tier provider (Gemini/GLM) has quota available.
+
+**Low reading-order/relations scores in the HTML report on some pages but not others** — check the `annotation_quality` field on the affected pages first; a missing `reading_order` / `block_relations` field (rather than a low-quality one) usually means a provider fallback occurred mid-run, not a scoring bug.
+
+---
+
+## Contributing
+
+Issues and PRs welcome. Please don't include real document content, output JSONs, or API keys in any PR — see `.gitignore`.

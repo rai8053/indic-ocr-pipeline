@@ -35,13 +35,6 @@ PROVIDER_INFO = {
         "has_official_quota_api": False,
         "local_tracking": True,
     },
-    "iamhc": {
-        "label": "IAMHC",
-        "description": "Relay (gpt-4o-mini)",
-        "has_official_usage_api": False,
-        "has_official_quota_api": False,
-        "local_tracking": True,
-    },
     "groq": {
         "label": "Groq",
         "description": "Llama 3.3 70B",

@@ -18,7 +18,6 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", os.environ.get("GOOGLE_API_KEY", ""))
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GLM_API_KEY = os.environ.get("GLM_API_KEY", "")
-IAMHC_API_KEY = os.environ.get("IAMHC_API_KEY", "")
 
 OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
 GEMINI_MODEL = "gemini-2.5-flash-lite"
@@ -38,9 +37,6 @@ QUOTA_STATE_FILE = Path(os.environ.get("QUOTA_STATE_FILE", str(Path(__file__).re
 # Free-tier safety limits (far below provider hard limits)
 VISION_MONTHLY_LIMIT = 1000   # Google Cloud Vision: 1000 units/month free
 LLM_DAILY_LIMIT = 1500        # Per-provider LLM requests/day (Gemini: ~1500 free)
-
-IAMHC_ENDPOINT = os.environ.get("IAMHC_ENDPOINT", "https://api.iamhc.cn/v1/chat/completions")
-IAMHC_MODEL = os.environ.get("IAMHC_MODEL", "auto")
 
 NO_TEXT_IN_PICTURE_MARKER = "[NO_TEXT_IN_PICTURE]"
 
