@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.pyc
+.pipeline_quota_state.json
+output/
+test_slice/
