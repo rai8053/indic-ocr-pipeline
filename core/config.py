@@ -38,6 +38,10 @@ QUOTA_STATE_FILE = Path(os.environ.get("QUOTA_STATE_FILE", str(Path(__file__).re
 VISION_MONTHLY_LIMIT = 1000   # Google Cloud Vision: 1000 units/month free
 LLM_DAILY_LIMIT = 1500        # Per-provider LLM requests/day (Gemini: ~1500 free)
 
+IAMHC_ENDPOINT = os.environ.get("IAMHC_ENDPOINT", "https://api.iamhc.cn/v1/chat/completions")
+IAMHC_MODEL = os.environ.get("IAMHC_MODEL", "auto")
+IAMHC_API_KEY = os.environ.get("IAMHC_API_KEY", "")
+
 NO_TEXT_IN_PICTURE_MARKER = "[NO_TEXT_IN_PICTURE]"
 
 VALID_CLASSES = [

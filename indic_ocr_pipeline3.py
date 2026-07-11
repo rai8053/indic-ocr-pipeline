@@ -34,10 +34,11 @@ from core.terminal import warn as _term_warn
 from core.config import (VALID_CLASSES, VALID_CLASSES_SET, CLASS_COLORS,
                          LANGUAGE_HINTS, VALID_RELATIONS, NO_TEXT_IN_PICTURE_MARKER,
                          GOOGLE_VISION_API_KEY, OPENROUTER_API_KEY,
-                          GEMINI_API_KEY, GROQ_API_KEY, GLM_API_KEY,
+                          GEMINI_API_KEY, GROQ_API_KEY, GLM_API_KEY, IAMHC_API_KEY,
                           OPENROUTER_MODEL, GEMINI_MODEL, GEMINI_ENDPOINT_TMPL,
                           GLM_ENDPOINT, GLM_MODEL, VISION_ENDPOINT,
                           OPENROUTER_ENDPOINT, GROQ_MODEL, GROQ_ENDPOINT,
+                          IAMHC_ENDPOINT, IAMHC_MODEL,
                           QUOTA_STATE_FILE, VISION_MONTHLY_LIMIT, LLM_DAILY_LIMIT,
                          RETRY_ATTEMPTS, RETRY_BACKOFF_SECONDS)
 from utils.usage import UsageTracker
@@ -710,18 +711,70 @@ def run_glm_proofread_batch(image_paths, pages_blocks, level=3):
 
 
 
+def run_iamhc_proofread_batch(image_paths, pages_blocks, level=3):
+    """OpenAI-compatible relay (supports vision models)."""
+    if not IAMHC_API_KEY:
+        raise RuntimeError("IAMHC_API_KEY not set")
+    prompt = build_vision_batch_prompt(pages_blocks, level=level)
+    content = [{"type": "text", "text": prompt}]
+    for img_path in image_paths:
+        b64 = image_to_base64(img_path)
+        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}})
+    payload = {"model": IAMHC_MODEL, "messages": [{"role": "user", "content": content}], "max_tokens": 16384}
+    headers = {"Authorization": f"Bearer {IAMHC_API_KEY}", "Content-Type": "application/json"}
+    n_pages = len(image_paths)
+    in_tok = max(1, len(prompt) // 4)
+    try:
+        resp, retries, lat = _post_with_retry(IAMHC_ENDPOINT, payload, headers, timeout=180)
+        raw_text = resp.json()["choices"][0]["message"]["content"]
+        out_tok = max(1, len(raw_text) // 4)
+        if _usg:
+            _usg.record_request("iamhc", success=True, latency_ms=lat,
+                retry_count=retries, pages=n_pages, images=n_pages,
+                input_tokens=in_tok, output_tokens=out_tok)
+        pages_out = _parse_batch_response(raw_text, n_pages, pages_blocks, level)
+        if level >= 4:
+            for page in pages_out:
+                page["annotation_quality"] = "full_level4"
+        return pages_out
+    except Exception as e:
+        try:
+            text_prompt = build_batch_prompt(pages_blocks, level=level)
+            text_payload = {"model": IAMHC_MODEL, "messages": [{"role": "user", "content": text_prompt}], "max_tokens": 16384}
+            resp, retries, lat = _post_with_retry(IAMHC_ENDPOINT, text_payload, headers, timeout=180)
+            raw_text = resp.json()["choices"][0]["message"]["content"]
+            out_tok = max(1, len(raw_text) // 4)
+            if _usg:
+                _usg.record_request("iamhc", success=True, latency_ms=lat,
+                    retry_count=retries, pages=n_pages, images=n_pages,
+                    input_tokens=in_tok, output_tokens=out_tok)
+            pages_out = _parse_batch_response(raw_text, n_pages, pages_blocks, level)
+            if level >= 4:
+                for page in pages_out:
+                    page["annotation_quality"] = "degraded_text_only_fallback"
+            return pages_out
+        except Exception as e2:
+            if _usg:
+                _usg.record_request("iamhc", success=False, latency_ms=0,
+                    retry_count=0, error=str(e2), pages=n_pages, images=n_pages)
+            raise RuntimeError(f"iamhc vision+text both failed: {e} / {e2}")
+
+
 def run_proofread_batch(provider: str, image_paths, pages_blocks, level=3):
     providers = {
         "openrouter": run_openrouter_proofread_batch,
         "gemini": run_gemini_proofread_batch,
         "groq": run_groq_proofread_batch,
         "glm": run_glm_proofread_batch,
+        "iamhc": run_iamhc_proofread_batch,
     }
     # Build failover chain: requested provider first, then fallbacks
     chain = [provider]
     if provider == "gemini":
-        chain.extend(["glm", "openrouter", "groq"])
+        chain.extend(["glm", "iamhc", "openrouter", "groq"])
     elif provider == "glm":
+        chain.extend(["iamhc", "openrouter", "groq"])
+    elif provider == "iamhc":
         chain.extend(["openrouter", "groq"])
     elif provider == "openrouter":
         chain.extend(["groq"])
@@ -1032,7 +1085,7 @@ def main():
     parser.add_argument("--out", required=True, help="Output directory")
     parser.add_argument("--dpi", type=int, default=150, help="Render DPI (default 150)")
     parser.add_argument("--jpeg-quality", type=int, default=60, help="JPEG quality 1-100 (default 60)")
-    parser.add_argument("--provider", choices=["openrouter", "gemini", "groq", "glm"], default="gemini",
+    parser.add_argument("--provider", choices=["openrouter", "gemini", "groq", "glm", "iamhc"], default="gemini",
                          help="Primary LLM provider. Failover: gemini->glm->openrouter, glm->openrouter")
     parser.add_argument("--level", type=int, choices=[3, 4], default=4, help="Annotation level (3 or 4)")
     parser.add_argument("--batch-size", type=int, default=1, help="Pages per request (default 1)")
