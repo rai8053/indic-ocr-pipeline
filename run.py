@@ -656,6 +656,44 @@ def show_quota_monitor(settings):
 
     or_usage = tracker.fetch_openrouter_official_usage(OPENROUTER_API_KEY)
 
+    try:
+        from rich.table import Table
+        from rich import box
+        c = __import__("core.terminal", fromlist=["_get"])._get()
+        if c:
+            table = Table(title="Provider Usage Summary", box=box.ROUNDED)
+            table.add_column("Provider", style="cyan")
+            table.add_column("Today", justify="right")
+            table.add_column("Month", justify="right")
+            table.add_column("Lifetime", justify="right")
+            table.add_column("Failures", justify="right")
+            table.add_column("Avg Latency", justify="right")
+
+            for prov in ["vision", "gemini", "glm", "iamhc", "groq", "openrouter"]:
+                pd = data["providers"].get(prov)
+                if not pd:
+                    continue
+                t = pd["today"]
+                m = pd["this_month"]
+                lt = pd["lifetime"]
+                if t["requests"] == 0 and lt["requests"] == 0 and m["requests"] == 0:
+                    continue
+                lat = f'{pd["avg_latency_ms"]:.0f}ms' if pd["avg_latency_ms"] else "-"
+                fail = str(t["failures"]) if t["failures"] else "0"
+                table.add_row(
+                    pd["label"],
+                    str(t["requests"]),
+                    str(m["requests"]),
+                    str(lt["requests"]),
+                    fail,
+                    lat,
+                )
+
+            c.print(table)
+            print()
+    except Exception:
+        pass
+
     for prov in ["vision", "gemini", "glm", "iamhc", "groq", "openrouter"]:
         pd = data["providers"].get(prov)
         if not pd:

@@ -1,0 +1,19 @@
+services:
+  pipeline:
+    build: .
+    volumes:
+      - ./.env:/app/.env
+      - ./input:/app/input
+      - ./output:/app/output
+    command: --pdf /app/input/document.pdf --lang odia --out /app/output --level 4 --validate --report
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./.env:/app/.env
+      - ./output:/app/output
+    command: python -m uvicorn api:app --host 0.0.0.0 --port 8000
+    profiles:
+      - api
