@@ -1,0 +1,41 @@
+* text=auto eol=lf
+
+# Python
+*.py text diff=python
+*.pyc binary
+*.pyo binary
+
+# Documents
+*.md text
+*.rst text
+*.txt text
+
+# Configuration
+*.cfg text
+*.conf text
+*.ini text
+*.toml text
+*.yaml text
+*.yml text
+*.json text
+
+# Environment
+.env.example text
+.env text
+.gitignore text
+.gitattributes text
+.editorconfig text
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg text
+
+# Archives
+*.zip binary
+*.tar.gz binary
+
+# PDFs
+*.pdf binary

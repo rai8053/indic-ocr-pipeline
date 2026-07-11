@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "indic-ocr-pipeline"
+version = "0.2.0"
+description = "Extract RFQ Level 4 layout annotations from scanned Indic-language PDFs using multi-provider LLM failover"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Raihan Hazra", email = "rai8053@github.com"},
+]
+keywords = [
+    "ocr", "document-layout-analysis", "indic-languages",
+    "machine-learning", "data-pipeline",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: General",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.28",
+    "opencv-python>=4.8",
+    "numpy>=1.24",
+    "PyMuPDF>=1.23",
+    "Pillow>=10.0",
+    "openpyxl>=3.1",
+]
+
+[project.urls]
+homepage = "https://github.com/rai8053/indic-ocr-pipeline"
+repository = "https://github.com/rai8053/indic-ocr-pipeline"
+changelog = "https://github.com/rai8053/indic-ocr-pipeline/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+packages = {find = {include = ["indic_ocr*", "core*", "layout*", "utils*", "validation*", "preprocessing*", "qa*", "report*"]}}
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "S", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.isort]
+profile = "black"
+line_length = 100

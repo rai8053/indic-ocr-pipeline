@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+title: "Indic OCR Pipeline"
+message: "If you use this software in your research, please cite it."
+type: software
+authors:
+  - given-names: Raihan
+    family-names: Hazra
+    email: rai8053@github.com
+identifiers:
+  - type: url
+    value: "https://github.com/rai8053/indic-ocr-pipeline"
+repository-code: "https://github.com/rai8053/indic-ocr-pipeline"
+license: MIT
+keywords:
+  - OCR
+  - document-layout-analysis
+  - indic-languages
+  - machine-learning
+  - data-pipeline
