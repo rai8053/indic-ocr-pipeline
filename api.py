@@ -91,7 +91,7 @@ async def annotate(
         content = await file.read()
         pdf_path.write_bytes(content)
 
-        from indic_ocr_pipeline3 import process_pdf
+        from pipeline.runner import process_pdf
 
         process_pdf(
             pdf_path=pdf_path,
