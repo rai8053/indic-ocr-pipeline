@@ -123,7 +123,7 @@ python indic_ocr_pipeline3.py \
 | `--pdf` | Input PDF file |
 | `--lang` | Language code — `hindi`, `bengali`, `gujarati`, `odia`, `assamese`, `punjabi`, `marathi`, `urdu`, `tamil`, `telugu`, `malayalam`, `kannada` |
 | `--out` | Output directory |
-| `--level` | Annotation level — `3` (classes + boxes + reading order) or `4` (+ LaTeX + relations) |
+| `--level` | Annotation level — see [Annotation Levels](#annotation-levels) below |
 | `--provider` | LLM provider override — `gemini`, `glm`, `openrouter`, `groq` |
 | `--batch-size` | Pages per LLM call. Tune based on provider token limits — see note below |
 | `--preprocess` | Apply OpenCV deskew / denoise / contrast correction before OCR |
@@ -136,7 +136,18 @@ python indic_ocr_pipeline3.py \
 
 ---
 
-## Output
+## Annotation Levels
+
+| Level | What it produces | How |
+|---|---|---|
+| **1** | Raw OCR only — bounding boxes + transcribed text per paragraph | Google Cloud Vision `DOCUMENT_TEXT_DETECTION`. No LLM involved. |
+| **2** | Raw OCR with LLM fallback — same as Level 1, produced when all LLM providers fail mid-run | Vision OCR output dumped directly to JSON with all classes set to `"Text"`. No reading order, no relations. Logged as a fallback. |
+| **3** | Class labels + reading order (recommended minimum for training data) | LLM assigns one of 13 RFQ classes (`Text`, `Title`, `Picture`, `Formula`, etc.) to each block and returns a `reading_order` permutation. |
+| **4** | Full RFQ annotation — classes + reading order + block relations + LaTeX markup | LLM additionally returns `block_relations` (caption↔table/figure links, footnote references) and LaTeX for tables (`\begin{tabular}...`) and display formulas. |
+
+> **Level 4 fidelity depends on the provider.** Vision-capable LLMs (Gemini, GLM, IAMHC) can produce full Level 4 output. Text-only fallback providers (OpenRouter, Groq) are tagged `"degraded_text_only_fallback"` — they return classes and reading order but cannot generate LaTeX or accurate relations.
+
+The CLI only accepts `--level 3` or `--level 4`. Levels 1 and 2 are internal concepts (raw OCR output and crash-fallback path).
 
 ```
 output/
