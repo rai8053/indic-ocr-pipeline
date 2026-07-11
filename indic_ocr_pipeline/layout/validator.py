@@ -37,17 +37,31 @@ def validate_page(json_path: Path) -> dict:
         with open(json_path, encoding="utf-8") as f:
             d = json.load(f)
     except Exception as e:
-        return {"valid": False, "errors": [f"Can't read JSON: {e}"], "warnings": [],
-                "class_count": 0, "level": 0, "checks": {}}
+        return {
+            "valid": False,
+            "errors": [f"Can't read JSON: {e}"],
+            "warnings": [],
+            "class_count": 0,
+            "level": 0,
+            "checks": {},
+        }
 
     checks: dict = {}
 
     # Required fields
-    missing_fields = [f for f in ("image", "block_boxes", "block_classes", "block_text") if f not in d]
+    missing_fields = [
+        f for f in ("image", "block_boxes", "block_classes", "block_text") if f not in d
+    ]
     if missing_fields:
         errors.append(f"Missing fields: {missing_fields}")
-        return {"valid": False, "errors": errors, "warnings": [],
-                "class_count": 0, "level": 0, "checks": {"required_fields": "FAIL"}}
+        return {
+            "valid": False,
+            "errors": errors,
+            "warnings": [],
+            "class_count": 0,
+            "level": 0,
+            "checks": {"required_fields": "FAIL"},
+        }
 
     checks["required_fields"] = "PASS"
     n = len(d["block_boxes"])
@@ -64,8 +78,14 @@ def validate_page(json_path: Path) -> dict:
     if n == 0:
         errors.append("No blocks found on page")
         checks["non_empty"] = "FAIL"
-        return {"valid": False, "errors": errors, "warnings": warnings,
-                "class_count": 0, "level": 0, "checks": checks}
+        return {
+            "valid": False,
+            "errors": errors,
+            "warnings": warnings,
+            "class_count": 0,
+            "level": 0,
+            "checks": checks,
+        }
 
     checks["non_empty"] = "PASS"
 
@@ -121,7 +141,9 @@ def validate_page(json_path: Path) -> dict:
                 area_j = (b2[2] - b2[0]) * (b2[3] - b2[1])
                 overlap_area = overlap_x * overlap_y
                 if overlap_area > 0.5 * min(area_i, area_j):
-                    warnings.append(f"block_boxes[{i}] and [{j}] overlap significantly ({overlap_area} px)")
+                    warnings.append(
+                        f"block_boxes[{i}] and [{j}] overlap significantly ({overlap_area} px)"
+                    )
                     checks["overlapping_boxes"] = "WARN"
 
     # Duplicate text
@@ -280,7 +302,8 @@ def score_page(json_path: Path) -> dict:
     rels = d.get("block_relations", [])
     if n > 0 and rels:
         valid_rels = sum(
-            1 for r in rels
+            1
+            for r in rels
             if 0 <= r.get("source", -1) < n
             and 0 <= r.get("target", -1) < n
             and r.get("relation", "") in VALID_RELATIONS

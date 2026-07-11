@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import requests
 
 from indic_ocr_pipeline.utils.config import (
-    GOOGLE_VISION_API_KEY, VISION_ENDPOINT, RETRY_ATTEMPTS, RETRY_BACKOFF_SECONDS,
+    GOOGLE_VISION_API_KEY,
+    VISION_ENDPOINT,
+    RETRY_ATTEMPTS,
+    RETRY_BACKOFF_SECONDS,
 )
 from indic_ocr_pipeline.utils.helpers import image_to_base64
 from indic_ocr_pipeline.models.annotation import VisionResult
@@ -26,7 +29,7 @@ def set_tracker(session: requests.Session) -> None:
 def run_vision_ocr(
     image_path: Path,
     language_hints: Optional[list[str]] = None,
-    usage_recorder: Optional[object] = None,
+    usage_recorder: Optional[Any] = None,
 ) -> dict:
     """Run Google Cloud Vision OCR on a single page image.
 
@@ -50,11 +53,13 @@ def run_vision_ocr(
 
     b64 = image_to_base64(image_path)
     request_body = {
-        "requests": [{
-            "image": {"content": b64},
-            "features": [{"type": "DOCUMENT_TEXT_DETECTION"}],
-            "imageContext": ({"languageHints": language_hints} if language_hints else {}),
-        }]
+        "requests": [
+            {
+                "image": {"content": b64},
+                "features": [{"type": "DOCUMENT_TEXT_DETECTION"}],
+                "imageContext": ({"languageHints": language_hints} if language_hints else {}),
+            }
+        ]
     }
 
     url = f"{VISION_ENDPOINT}?key={GOOGLE_VISION_API_KEY}"
@@ -65,14 +70,18 @@ def run_vision_ocr(
 
     for attempt in range(RETRY_ATTEMPTS):
         try:
-            resp = session.post(url, json=request_body, timeout=60)
+            resp = session.post(url, json=request_body, timeout=60)  # type: ignore[arg-type]
             if resp.status_code == 200:
                 latency = (time.time() - t0) * 1000
                 if usage_recorder:
                     usage_recorder.record_request(
-                        "vision", model="DOCUMENT_TEXT_DETECTION",
-                        success=True, latency_ms=latency, retry_count=retries,
-                        pages=1, images=1,
+                        "vision",
+                        model="DOCUMENT_TEXT_DETECTION",
+                        success=True,
+                        latency_ms=latency,
+                        retry_count=retries,
+                        pages=1,
+                        images=1,
                     )
                 break
             retries += 1
@@ -85,9 +94,14 @@ def run_vision_ocr(
                 latency = (time.time() - t0) * 1000
                 if usage_recorder:
                     usage_recorder.record_request(
-                        "vision", model="DOCUMENT_TEXT_DETECTION",
-                        success=False, latency_ms=latency, retry_count=retries,
-                        error=str(e), pages=1, images=1,
+                        "vision",
+                        model="DOCUMENT_TEXT_DETECTION",
+                        success=False,
+                        latency_ms=latency,
+                        retry_count=retries,
+                        error=str(e),
+                        pages=1,
+                        images=1,
                     )
                 raise RuntimeError(f"Vision API failed after {retries} attempts: {e}")
             time.sleep(RETRY_BACKOFF_SECONDS * (attempt + 1))
@@ -95,9 +109,14 @@ def run_vision_ocr(
         latency = (time.time() - t0) * 1000
         if usage_recorder:
             usage_recorder.record_request(
-                "vision", model="DOCUMENT_TEXT_DETECTION",
-                success=False, latency_ms=latency, retry_count=retries,
-                error=last_err, pages=1, images=1,
+                "vision",
+                model="DOCUMENT_TEXT_DETECTION",
+                success=False,
+                latency_ms=latency,
+                retry_count=retries,
+                error=last_err,
+                pages=1,
+                images=1,
             )
         raise RuntimeError(f"Vision API failed after {RETRY_ATTEMPTS} attempts: {last_err}")
 
@@ -124,9 +143,7 @@ def run_vision_ocr(
                     para_text += symbols
                     last_symbol = word.get("symbols", [{}])[-1]
                     break_type = (
-                        last_symbol.get("property", {})
-                        .get("detectedBreak", {})
-                        .get("type", "")
+                        last_symbol.get("property", {}).get("detectedBreak", {}).get("type", "")
                     )
                     if break_type in ("SPACE", "EOL_SURE_SPACE"):
                         para_text += " "

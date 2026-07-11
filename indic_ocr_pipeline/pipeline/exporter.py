@@ -35,8 +35,11 @@ def create_submission_zip(
 
     if max_samples > 0 and len(json_files) > max_samples:
         from indic_ocr_pipeline.layout.validator import validate_page
+
         scored = [(j, validate_page(j)) for j in json_files]
-        scored.sort(key=lambda x: (x[1].get("diverse", False), x[1].get("class_count", 0)), reverse=True)
+        scored.sort(
+            key=lambda x: (x[1].get("diverse", False), x[1].get("class_count", 0)), reverse=True
+        )
         json_files = [s[0] for s in scored[:max_samples]]
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:

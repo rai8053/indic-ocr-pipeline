@@ -1,4 +1,5 @@
 """Tests for quality scoring module."""
+
 from indic_ocr_pipeline.layout.validator import score_page
 import json
 

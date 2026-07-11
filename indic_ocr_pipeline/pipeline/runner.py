@@ -10,8 +10,11 @@ from pathlib import Path
 from typing import Any, Optional
 
 from indic_ocr_pipeline.utils.config import (
-    LANGUAGE_HINTS, NO_TEXT_IN_PICTURE_MARKER,
-    QUOTA_STATE_FILE, VISION_MONTHLY_LIMIT, LLM_DAILY_LIMIT,
+    LANGUAGE_HINTS,
+    NO_TEXT_IN_PICTURE_MARKER,
+    QUOTA_STATE_FILE,
+    VISION_MONTHLY_LIMIT,
+    LLM_DAILY_LIMIT,
 )
 from indic_ocr_pipeline.utils.usage import UsageTracker
 from indic_ocr_pipeline.utils.logging import PipelineLogger
@@ -23,7 +26,6 @@ from indic_ocr_pipeline.reporting.html import generate_report
 from indic_ocr_pipeline.reporting.overlay import draw_overlay
 from indic_ocr_pipeline.pipeline.metrics import validate_and_score_pages, format_usage_for_report
 from indic_ocr_pipeline.pipeline.exporter import create_submission_zip
-
 
 _tracker: Optional[UsageTracker] = None
 
@@ -112,6 +114,7 @@ def process_pdf(
     picture_blocks_by_page: dict[str, list[dict]] = {}
     try:
         import fitz
+
         pic_doc = fitz.open(pdf_path)
         for i, img_path in enumerate(image_paths):
             if i < len(pic_doc):
@@ -189,7 +192,7 @@ def process_pdf(
 
     ocr_items = list(ocr_cache.items())
     for i in range(0, len(ocr_items), batch_size):
-        chunk = ocr_items[i:i + batch_size]
+        chunk = ocr_items[i : i + batch_size]
         chunk_paths = [p for p, _ in chunk]
         chunk_blocks = [r["blocks"] for _, r in chunk]
 
@@ -205,8 +208,11 @@ def process_pdf(
         plog.start_stage("llm_proofread")
         try:
             pages_out = run_proofread_batch(
-                provider, chunk_paths, chunk_blocks,
-                level=level, usage_recorder=_usg,
+                provider,
+                chunk_paths,
+                chunk_blocks,
+                level=level,
+                usage_recorder=_usg,
             )
             plog.log(f"      [OK] {provider} proofread completed")
             for img_path, page_result in zip(chunk_paths, pages_out):
@@ -239,6 +245,7 @@ def process_pdf(
         jsons = sorted(json_dir.glob("*.json"))
         plog.start_stage("auto_relations")
         from indic_ocr_pipeline.layout.relations import auto_relations
+
         for j in jsons:
             data = json.load(open(j, encoding="utf-8"))
             if not data.get("block_relations"):
@@ -298,19 +305,21 @@ def process_pdf(
             data = json.load(open(j, encoding="utf-8"))
             overlay_rel = ""
             if qa:
-                overlay_path = (
-                    qa_dir if qa_dir else out_dir / "qa"
-                ) / f"{j.stem}_overlay.jpg"
+                overlay_path = (qa_dir if qa_dir else out_dir / "qa") / f"{j.stem}_overlay.jpg"
                 if overlay_path.exists():
                     report_path = report_dir if report_dir else out_dir / "report"
                     overlay_rel = str(os.path.relpath(overlay_path, report_path))
-            report_pages.append({
-                "name": j.name,
-                "validation": r,
-                "scores": s,
-                "overlay": overlay_rel,
-            })
-        output_report = report_dir / "report.html" if report_dir else out_dir / "report" / "report.html"
+            report_pages.append(
+                {
+                    "name": j.name,
+                    "validation": r,
+                    "scores": s,
+                    "overlay": overlay_rel,
+                }
+            )
+        output_report = (
+            report_dir / "report.html" if report_dir else out_dir / "report" / "report.html"
+        )
         _r_usage = format_usage_for_report(_usg if _usg else None)
         generate_report(report_pages, output_report, usage=_r_usage)
         plog.log(f"      -> {output_report}")
@@ -320,6 +329,7 @@ def process_pdf(
     if validate and not any(all_validations):
         plog.log("\n[Validation] Checking annotations...")
         from indic_ocr_pipeline.layout.validator import validate_page as _validate_page
+
         passed = 0
         for j in jsons:
             r = _validate_page(j)
@@ -333,6 +343,7 @@ def process_pdf(
     # ZIP creation
     if create_zip:
         import zipfile
+
         plog.log("\n[ZIP] Creating submission...")
         zip_path = create_submission_zip(out_dir, lang, jsons, images_dir, max_samples)
         plog.log(f"      -> {zip_path}")
@@ -367,13 +378,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Indic OCR/parse dataset pipeline (Upgraded)")
     parser.add_argument("--pdf", required=True, help="Path to source PDF")
     parser.add_argument(
-        "--lang", default="",
+        "--lang",
+        default="",
         help="Target language, e.g. tamil (auto-detected if omitted)",
     )
     parser.add_argument("--out", required=True, help="Output directory")
     parser.add_argument("--dpi", type=int, default=150, help="Render DPI (default 150)")
     parser.add_argument(
-        "--jpeg-quality", type=int, default=60,
+        "--jpeg-quality",
+        type=int,
+        default=60,
         help="JPEG quality 1-100 (default 60)",
     )
     parser.add_argument(
@@ -383,45 +397,65 @@ def main() -> None:
         help="Primary LLM provider. Failover: gemini->glm->openrouter, glm->openrouter",
     )
     parser.add_argument(
-        "--level", type=int, choices=[3, 4], default=4,
+        "--level",
+        type=int,
+        choices=[3, 4],
+        default=4,
         help="Annotation level (3 or 4)",
     )
     parser.add_argument(
-        "--batch-size", type=int, default=1,
+        "--batch-size",
+        type=int,
+        default=1,
         help="Pages per request (default 1)",
     )
     parser.add_argument("--validate", action="store_true", help="Validate output JSONs")
     parser.add_argument("--zip", action="store_true", help="Create submission ZIP")
     parser.add_argument(
-        "--max-pages", type=int, default=0,
+        "--max-pages",
+        type=int,
+        default=0,
         help="Process only first N pages (0=all)",
     )
     parser.add_argument(
-        "--samples", type=int, default=0,
+        "--samples",
+        type=int,
+        default=0,
         help="Max samples in ZIP (0=all)",
     )
     parser.add_argument(
-        "--preprocess", action="store_true",
+        "--preprocess",
+        action="store_true",
         help="Enable OpenCV preprocessing (deskew, denoise, contrast)",
     )
     parser.add_argument(
-        "--qa", action="store_true",
+        "--qa",
+        action="store_true",
         help="Generate visual QA overlays (boxes, classes, reading order arrows)",
     )
     parser.add_argument(
-        "--report", action="store_true",
+        "--report",
+        action="store_true",
         help="Generate HTML quality report with RFQ scores",
     )
     args = parser.parse_args()
 
     process_pdf(
-        Path(args.pdf), args.lang, Path(args.out),
-        dpi=args.dpi, jpeg_quality=args.jpeg_quality,
-        provider=args.provider, batch_size=args.batch_size,
-        create_zip=args.zip, max_samples=args.samples,
-        validate=args.validate, level=args.level,
-        preprocess=args.preprocess, qa=args.qa,
-        create_report=args.report, max_pages=args.max_pages,
+        Path(args.pdf),
+        args.lang,
+        Path(args.out),
+        dpi=args.dpi,
+        jpeg_quality=args.jpeg_quality,
+        provider=args.provider,
+        batch_size=args.batch_size,
+        create_zip=args.zip,
+        max_samples=args.samples,
+        validate=args.validate,
+        level=args.level,
+        preprocess=args.preprocess,
+        qa=args.qa,
+        create_report=args.report,
+        max_pages=args.max_pages,
     )
 
 

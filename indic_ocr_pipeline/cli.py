@@ -20,15 +20,18 @@ BASE = Path(__file__).resolve().parent.parent
 PIPELINE = BASE / "indic_ocr_pipeline3.py"
 
 LANG_DISPLAY: dict[str, str] = {
-    "odia": "Odia", "marathi": "Marathi",
-    "telugu": "Telugu", "tamil": "Tamil", "unknown": "Unknown",
+    "odia": "Odia",
+    "marathi": "Marathi",
+    "telugu": "Telugu",
+    "tamil": "Tamil",
+    "unknown": "Unknown",
 }
 
 LANG_PATTERNS: dict[str, list[str]] = {
-    "odia":    [r"(?i)odia|oriya|bhougalika|sagyan|prakarana"],
+    "odia": [r"(?i)odia|oriya|bhougalika|sagyan|prakarana"],
     "marathi": [r"(?i)marathi|baldarshan"],
-    "telugu":  [r"(?i)telugu|adikaara|basha"],
-    "tamil":   [r"(?i)tamil|tnla"],
+    "telugu": [r"(?i)telugu|adikaara|basha"],
+    "tamil": [r"(?i)tamil|tnla"],
 }
 
 
@@ -136,6 +139,7 @@ class Dashboard:
             from rich.table import Table as _RT
             from rich.text import Text as _RText
             from rich.console import Group as _RGroup
+
             self._has_rich = True
             self._RText = _RText
             self._RT = _RT
@@ -167,7 +171,8 @@ class Dashboard:
                 (self._current_page or "--", "bold"),
                 "     ",
                 ("Stage:", "dim"),
-                " ", (self._current_stage or "--", "bold blue"),
+                " ",
+                (self._current_stage or "--", "bold blue"),
             ),
         )
 
@@ -241,8 +246,13 @@ class Dashboard:
         return "\n".join(lines)
 
     def update(
-        self, pages_done: int, total_pages: int, pdf_name: str,
-        current_page: str, current_stage: str, stage_status: dict[str, str],
+        self,
+        pages_done: int,
+        total_pages: int,
+        pdf_name: str,
+        current_page: str,
+        current_stage: str,
+        stage_status: dict[str, str],
     ) -> None:
         self._pages_done = pages_done
         self._total_pages = total_pages
@@ -286,6 +296,7 @@ class Dashboard:
 def get_page_count(pdf_path: Path) -> Optional[int]:
     try:
         import fitz
+
         doc = fitz.open(pdf_path)
         n = doc.page_count
         doc.close()
@@ -306,7 +317,10 @@ def pdf_label(pdf: Path, show_count: bool = True) -> str:
 
 
 def run_for_language(
-    lang_key: str, files: list[str], max_pages: int, settings: Optional[dict] = None,
+    lang_key: str,
+    files: list[str],
+    max_pages: int,
+    settings: Optional[dict] = None,
 ) -> dict[str, Any]:
     if settings is None:
         settings = {}
@@ -345,13 +359,20 @@ def run_for_language(
             pdf_valid = 0
 
             cmd = [
-                sys.executable, str(PIPELINE),
-                "--pdf", str(pdf),
-                "--out", str(out_dir / "output" / Path(fname).stem),
-                "--lang", lang_key,
-                "--provider", str(settings.get("provider", "gemini")),
-                "--level", str(settings.get("level", 4)),
-                "--max-pages", str(max_pages),
+                sys.executable,
+                str(PIPELINE),
+                "--pdf",
+                str(pdf),
+                "--out",
+                str(out_dir / "output" / Path(fname).stem),
+                "--lang",
+                lang_key,
+                "--provider",
+                str(settings.get("provider", "gemini")),
+                "--level",
+                str(settings.get("level", 4)),
+                "--max-pages",
+                str(max_pages),
             ]
             if settings.get("preprocess", False):
                 cmd.append("--preprocess")
@@ -374,6 +395,7 @@ def run_for_language(
                 env=proc_env,
             )
 
+            assert proc.stdout is not None
             for line in iter(proc.stdout.readline, ""):
                 line = line.rstrip()
 
@@ -443,8 +465,12 @@ def run_for_language(
                     )
 
                 dashboard.update(
-                    pages_done, total_pages, fname,
-                    current_page, current_stage, stage_status,
+                    pages_done,
+                    total_pages,
+                    fname,
+                    current_page,
+                    current_stage,
+                    stage_status,
                 )
 
             proc.wait()
@@ -461,7 +487,12 @@ def run_for_language(
 
         stage_status["ZIP"] = "done"
         dashboard.update(
-            pages_done, total_pages, fname, "", "Complete", stage_status,
+            pages_done,
+            total_pages,
+            fname,
+            "",
+            "Complete",
+            stage_status,
         )
         if settings.get("zip", True):
             zip_output(lang_key, out_dir)
@@ -512,7 +543,9 @@ def display_summary(stats_list: list[dict[str, Any]]) -> None:
     raw(f"  [bold cyan]Average OCR Time[/bold cyan]     : {avg_ocr:.2f}s")
     raw(f"  [bold cyan]Average LLM Time[/bold cyan]     : {avg_llm:.2f}s")
     raw(f"  [bold cyan]Average Total Time[/bold cyan]   : {avg_total:.2f}s")
-    raw(f"  [bold cyan]RFQ Pass Rate[/bold cyan]        : [{rate_color}]{pass_rate:.0f}%[/{rate_color}]")
+    raw(
+        f"  [bold cyan]RFQ Pass Rate[/bold cyan]        : [{rate_color}]{pass_rate:.0f}%[/{rate_color}]"
+    )
     print()
     raw(f"  [bold cyan]Output Folder[/bold cyan]        : {base_out}")
     raw(f"  [bold cyan]HTML Report[/bold cyan]          : {report_rel or 'N/A'}")
@@ -539,6 +572,7 @@ def show_system_status(settings: dict[str, Any]) -> None:
     last_req = data["recent_requests"][0] if data["recent_requests"] else None
     if last_req:
         from datetime import datetime
+
         ts_str = datetime.fromtimestamp(last_req["t"]).strftime("%Y-%m-%d %H:%M:%S")
         raw(
             f"    [bold cyan]Last Request[/bold cyan]     : "
@@ -551,9 +585,14 @@ def show_system_status(settings: dict[str, Any]) -> None:
 
 def _check_api_key(prov: str) -> bool:
     from indic_ocr_pipeline.utils.config import (
-        GEMINI_API_KEY, GOOGLE_VISION_API_KEY, GLM_API_KEY,
-        GROQ_API_KEY, OPENROUTER_API_KEY, IAMHC_API_KEY,
+        GEMINI_API_KEY,
+        GOOGLE_VISION_API_KEY,
+        GLM_API_KEY,
+        GROQ_API_KEY,
+        OPENROUTER_API_KEY,
+        IAMHC_API_KEY,
     )
+
     _key_map = {
         "vision": GOOGLE_VISION_API_KEY,
         "gemini": GEMINI_API_KEY,
@@ -573,12 +612,15 @@ def show_quota_monitor(settings: dict[str, Any]) -> None:
     print()
 
     or_usage = tracker.fetch_openrouter_official_usage(
-        __import__("indic_ocr_pipeline.utils.config", fromlist=["OPENROUTER_API_KEY"]).OPENROUTER_API_KEY
+        __import__(
+            "indic_ocr_pipeline.utils.config", fromlist=["OPENROUTER_API_KEY"]
+        ).OPENROUTER_API_KEY
     )
 
     try:
         from rich.table import Table
         from rich import box
+
         c = __import__("indic_ocr_pipeline.utils.helpers", fromlist=["_get_console"])._get_console()
         if c:
             table = Table(title="Provider Usage Summary", box=box.ROUNDED)
@@ -598,7 +640,14 @@ def show_quota_monitor(settings: dict[str, Any]) -> None:
                 if t["requests"] == 0 and lt["requests"] == 0 and m["requests"] == 0:
                     continue
                 lat = f'{pd["avg_latency_ms"]:.0f}ms' if pd["avg_latency_ms"] else "-"
-                table.add_row(pd["label"], str(t["requests"]), str(m["requests"]), str(lt["requests"]), str(t["failures"]) if t["failures"] else "0", lat)
+                table.add_row(
+                    pd["label"],
+                    str(t["requests"]),
+                    str(m["requests"]),
+                    str(lt["requests"]),
+                    str(t["failures"]) if t["failures"] else "0",
+                    lat,
+                )
             c.print(table)
             print()
     except Exception:
@@ -620,7 +669,9 @@ def show_quota_monitor(settings: dict[str, Any]) -> None:
         key_status = "Loaded" if key_ok else "Not set"
 
         raw(f"  [bold cyan]{pd['label']}[/bold cyan]")
-        raw(f"    API Key            : [{'green' if key_ok else 'red'}]{key_status}[/{'green' if key_ok else 'red'}]")
+        raw(
+            f"    API Key            : [{'green' if key_ok else 'red'}]{key_status}[/{'green' if key_ok else 'red'}]"
+        )
 
         if pd["has_official_usage_api"]:
             if or_usage:
@@ -642,8 +693,12 @@ def show_quota_monitor(settings: dict[str, Any]) -> None:
         if t["requests"]:
             raw(f"    Avg Latency        : {pd['avg_latency_ms']:.0f} ms")
         if prov != "vision":
-            raw(f"    Input Tokens       : {t['input_tokens']:,} today / {m['input_tokens']:,} month")
-            raw(f"    Output Tokens      : {t['output_tokens']:,} today / {m['output_tokens']:,} month")
+            raw(
+                f"    Input Tokens       : {t['input_tokens']:,} today / {m['input_tokens']:,} month"
+            )
+            raw(
+                f"    Output Tokens      : {t['output_tokens']:,} today / {m['output_tokens']:,} month"
+            )
         else:
             raw(f"    Pages Processed    : {t['pages']} today / {m['pages']} month")
         if t["failures"] or lt["failures"]:
@@ -687,8 +742,11 @@ def run_checks() -> None:
     elif v >= (3, 8):
         _check_result("warn", f"Python {v.major}.{v.minor}.{v.micro} (3.10+ recommended)")
     else:
-        _check_result("fail", f"Python {v.major}.{v.minor}.{v.micro} (3.8+ required)",
-                       "Upgrade to Python 3.10+ from https://python.org")
+        _check_result(
+            "fail",
+            f"Python {v.major}.{v.minor}.{v.micro} (3.8+ required)",
+            "Upgrade to Python 3.10+ from https://python.org",
+        )
         critical = True
 
     # Required packages
@@ -714,6 +772,7 @@ def run_checks() -> None:
 
     # API Keys
     from indic_ocr_pipeline.utils.config import GEMINI_API_KEY, GOOGLE_VISION_API_KEY, GLM_API_KEY
+
     keys = [
         ("Google Cloud Vision", GOOGLE_VISION_API_KEY, "GOOGLE_VISION_API_KEY"),
         ("Gemini", GEMINI_API_KEY, "GEMINI_API_KEY"),
@@ -723,8 +782,9 @@ def run_checks() -> None:
         if val:
             _check_result("pass", f"API Key: {name}")
         else:
-            _check_result("warn", f"API Key: {name} not set",
-                          f"Add {env_var}=your_key to .env file")
+            _check_result(
+                "warn", f"API Key: {name} not set", f"Add {env_var}=your_key to .env file"
+            )
 
     # Output folder
     test_dir = BASE / "output"
@@ -735,18 +795,25 @@ def run_checks() -> None:
         test_file.unlink()
         _check_result("pass", "Output folder writable")
     except Exception:
-        _check_result("fail", "Cannot write to output/ folder",
-                       "Check folder permissions or run as different user")
+        _check_result(
+            "fail",
+            "Cannot write to output/ folder",
+            "Check folder permissions or run as different user",
+        )
         critical = True
 
     # Internet connectivity
     try:
         import urllib.request
+
         urllib.request.urlopen("https://www.google.com", timeout=5)
         _check_result("pass", "Internet connectivity")
     except Exception:
-        _check_result("warn", "Internet connectivity failed",
-                       "Check network connection (required for OCR + LLM)")
+        _check_result(
+            "warn",
+            "Internet connectivity failed",
+            "Check network connection (required for OCR + LLM)",
+        )
 
     rule()
     print()
@@ -839,7 +906,9 @@ def main() -> None:
         rule("Select Language")
         for i, k in enumerate(sorted_langs, 1):
             count = len(lang_groups[k])
-            print(f"  [{i}] {LANG_DISPLAY.get(k, k.capitalize())} ({count} PDF{'s' if count != 1 else ''})")
+            print(
+                f"  [{i}] {LANG_DISPLAY.get(k, k.capitalize())} ({count} PDF{'s' if count != 1 else ''})"
+            )
         rule()
         print("  [S]ettings  [Q]uota  [E]xit")
         print()

@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from indic_ocr_pipeline.utils.config import OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_ENDPOINT
+from indic_ocr_pipeline.utils.config import (
+    OPENROUTER_API_KEY,
+    OPENROUTER_MODEL,
+    OPENROUTER_ENDPOINT,
+)
 from indic_ocr_pipeline.providers.manager import _post_with_retry, _parse_provider_result
 
 
@@ -12,7 +16,7 @@ def run_openrouter_proofread_batch(
     image_paths: list[Any],
     pages_blocks: list[list[dict]],
     level: int = 3,
-    usage_recorder: Optional[object] = None,
+    usage_recorder: Optional[Any] = None,
 ) -> list[dict]:
     """Run a proofreading batch via OpenRouter (text-only).
 
@@ -33,6 +37,7 @@ def run_openrouter_proofread_batch(
         raise RuntimeError("OPENROUTER_API_KEY not set")
 
     from indic_ocr_pipeline.pipeline.orchestrator import build_batch_prompt
+
     prompt = build_batch_prompt(pages_blocks, level=level)
     payload: dict = {
         "model": OPENROUTER_MODEL,
@@ -53,17 +58,29 @@ def run_openrouter_proofread_batch(
 
         if usage_recorder:
             usage_recorder.record_request(
-                "openrouter", success=True, latency_ms=lat,
-                retry_count=retries, pages=n_pages, images=n_pages,
-                input_tokens=in_tok, output_tokens=out_tok,
+                "openrouter",
+                success=True,
+                latency_ms=lat,
+                retry_count=retries,
+                pages=n_pages,
+                images=n_pages,
+                input_tokens=in_tok,
+                output_tokens=out_tok,
             )
 
-        return _parse_provider_result(raw_text, n_pages, pages_blocks, level, "degraded_text_only_fallback")
+        return _parse_provider_result(
+            raw_text, n_pages, pages_blocks, level, "degraded_text_only_fallback"
+        )
 
     except Exception as e:
         if usage_recorder:
             usage_recorder.record_request(
-                "openrouter", success=False, latency_ms=0,
-                retry_count=0, error=str(e), pages=n_pages, images=n_pages,
+                "openrouter",
+                success=False,
+                latency_ms=0,
+                retry_count=0,
+                error=str(e),
+                pages=n_pages,
+                images=n_pages,
             )
         raise

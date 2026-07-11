@@ -13,7 +13,7 @@ def run_gemini_proofread_batch(
     image_paths: list[Any],
     pages_blocks: list[list[dict]],
     level: int = 3,
-    usage_recorder: Optional[object] = None,
+    usage_recorder: Optional[Any] = None,
 ) -> list[dict]:
     """Run a proofreading batch via Gemini (vision + text).
 
@@ -35,15 +35,18 @@ def run_gemini_proofread_batch(
         raise RuntimeError("GEMINI_API_KEY not set")
 
     from indic_ocr_pipeline.pipeline.orchestrator import build_vision_batch_prompt
+
     prompt = build_vision_batch_prompt(pages_blocks, level=level)
     parts: list[dict] = [{"text": prompt}]
     for img_path in image_paths:
-        parts.append({
-            "inline_data": {
-                "mime_type": "image/jpeg",
-                "data": image_to_base64(img_path),
-            },
-        })
+        parts.append(
+            {
+                "inline_data": {
+                    "mime_type": "image/jpeg",
+                    "data": image_to_base64(img_path),
+                },
+            }
+        )
 
     url = GEMINI_ENDPOINT_TMPL.format(model=GEMINI_MODEL)
     headers = {
@@ -64,9 +67,14 @@ def run_gemini_proofread_batch(
 
         if usage_recorder:
             usage_recorder.record_request(
-                "gemini", success=True, latency_ms=lat,
-                retry_count=retries, pages=n_pages, images=n_pages,
-                input_tokens=in_tok, output_tokens=out_tok,
+                "gemini",
+                success=True,
+                latency_ms=lat,
+                retry_count=retries,
+                pages=n_pages,
+                images=n_pages,
+                input_tokens=in_tok,
+                output_tokens=out_tok,
             )
 
         return _parse_provider_result(raw_text, n_pages, pages_blocks, level, "full_level4")
@@ -74,7 +82,12 @@ def run_gemini_proofread_batch(
     except Exception as e:
         if usage_recorder:
             usage_recorder.record_request(
-                "gemini", success=False, latency_ms=0,
-                retry_count=0, error=str(e), pages=n_pages, images=n_pages,
+                "gemini",
+                success=False,
+                latency_ms=0,
+                retry_count=0,
+                error=str(e),
+                pages=n_pages,
+                images=n_pages,
             )
         raise

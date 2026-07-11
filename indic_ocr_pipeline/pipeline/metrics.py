@@ -45,8 +45,7 @@ def format_usage_for_report(usage_recorder: Any) -> dict[str, Any]:
     if usage_recorder:
         rd = usage_recorder.dashboard()
         result["providers"] = {
-            p: d["today"]["requests"]
-            for p, d in rd.get("providers", {}).items()
+            p: d["today"]["requests"] for p, d in rd.get("providers", {}).items()
         }
         result["total"] = sum(result["providers"].values())
     return result

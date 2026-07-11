@@ -4,6 +4,7 @@ Sample data for testing the Indic OCR Pipeline.
 This module provides helper functions to generate sample annotation
 data for test runs and demonstrations without needing a real PDF.
 """
+
 import json
 from pathlib import Path
 

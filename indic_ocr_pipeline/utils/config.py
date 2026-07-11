@@ -22,7 +22,9 @@ if _env_path.exists():
 # ---------------------------------------------------------------------------
 # API Keys
 # ---------------------------------------------------------------------------
-GOOGLE_VISION_API_KEY: str = os.environ.get("GOOGLE_VISION_API_KEY", os.environ.get("GOOGLE_VISION_KEY", ""))
+GOOGLE_VISION_API_KEY: str = os.environ.get(
+    "GOOGLE_VISION_API_KEY", os.environ.get("GOOGLE_VISION_KEY", "")
+)
 OPENROUTER_API_KEY: str = os.environ.get("OPENROUTER_API_KEY", "")
 GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", os.environ.get("GOOGLE_API_KEY", ""))
 GROQ_API_KEY: str = os.environ.get("GROQ_API_KEY", "")
@@ -34,7 +36,9 @@ IAMHC_API_KEY: str = os.environ.get("IAMHC_API_KEY", "")
 # ---------------------------------------------------------------------------
 OPENROUTER_MODEL: str = "meta-llama/llama-3.3-70b-instruct:free"
 GEMINI_MODEL: str = "gemini-2.5-flash-lite"
-GEMINI_ENDPOINT_TMPL: str = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+GEMINI_ENDPOINT_TMPL: str = (
+    "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+)
 GLM_ENDPOINT: str = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
 GLM_MODEL: str = "glm-4v-flash"
 VISION_ENDPOINT: str = "https://vision.googleapis.com/v1/images:annotate"
@@ -60,7 +64,7 @@ QUOTA_STATE_FILE: Path = Path(
     )
 )
 VISION_MONTHLY_LIMIT: int = 1000  # Google Cloud Vision free tier
-LLM_DAILY_LIMIT: int = 1500       # Per-provider daily safety limit
+LLM_DAILY_LIMIT: int = 1500  # Per-provider daily safety limit
 
 # ---------------------------------------------------------------------------
 # Picture Detection
@@ -71,9 +75,19 @@ NO_TEXT_IN_PICTURE_MARKER: str = "[NO_TEXT_IN_PICTURE]"
 # RFQ Class Taxonomy
 # ---------------------------------------------------------------------------
 VALID_CLASSES: list[str] = [
-    "Text", "Title", "Section-header", "List-item", "TOC", "Bibliography",
-    "Footnote", "Page-header", "Page-footer", "Picture", "Formula",
-    "Table", "Caption",
+    "Text",
+    "Title",
+    "Section-header",
+    "List-item",
+    "TOC",
+    "Bibliography",
+    "Footnote",
+    "Page-header",
+    "Page-footer",
+    "Picture",
+    "Formula",
+    "Table",
+    "Caption",
 ]
 VALID_CLASSES_SET: set[str] = set(VALID_CLASSES)
 
@@ -81,8 +95,10 @@ VALID_CLASSES_SET: set[str] = set(VALID_CLASSES)
 # Relations
 # ---------------------------------------------------------------------------
 VALID_RELATIONS: list[str] = [
-    "caption_of_table", "table_has_caption",
-    "caption_of_figure", "figure_has_caption",
+    "caption_of_table",
+    "table_has_caption",
+    "caption_of_figure",
+    "figure_has_caption",
     "footnote_refers_to",
 ]
 
@@ -90,9 +106,18 @@ VALID_RELATIONS: list[str] = [
 # Language Hints
 # ---------------------------------------------------------------------------
 LANGUAGE_HINTS: dict[str, list[str]] = {
-    "hindi": ["hi"], "bengali": ["bn"], "gujarati": ["gu"], "odia": ["or"],
-    "assamese": ["as"], "punjabi": ["pa"], "marathi": ["mr"], "urdu": ["ur"],
-    "tamil": ["ta"], "telugu": ["te"], "malayalam": ["ml"], "kannada": ["kn"],
+    "hindi": ["hi"],
+    "bengali": ["bn"],
+    "gujarati": ["gu"],
+    "odia": ["or"],
+    "assamese": ["as"],
+    "punjabi": ["pa"],
+    "marathi": ["mr"],
+    "urdu": ["ur"],
+    "tamil": ["ta"],
+    "telugu": ["te"],
+    "malayalam": ["ml"],
+    "kannada": ["kn"],
 }
 
 # ---------------------------------------------------------------------------

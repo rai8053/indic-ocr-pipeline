@@ -8,6 +8,7 @@ Usage:
     uvicorn api:app --host 0.0.0.0 --port 8000
     # or: python -m uvicorn api:app --reload
 """
+
 import json
 import logging
 import os
@@ -124,6 +125,7 @@ async def annotate(
         raise HTTPException(500, str(e))
     finally:
         import shutil
+
         shutil.rmtree(tmp, ignore_errors=True)
 
 
@@ -148,4 +150,5 @@ async def batch_annotate(
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

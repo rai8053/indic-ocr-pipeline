@@ -7,13 +7,13 @@ import re as _re
 from pathlib import Path
 from typing import Optional
 
-
 # ---------------------------------------------------------------------------
 # Terminal output (Rich-aware)
 # ---------------------------------------------------------------------------
 
 try:
     from rich.console import Console as _Console
+
     _HAS_RICH = True
 except ImportError:
     _HAS_RICH = False
@@ -26,6 +26,7 @@ def _get_console() -> Optional[_Console]:
     global _console
     if _console is None and _HAS_RICH:
         from rich.console import Console
+
         _console = Console()
     return _console
 
@@ -149,6 +150,7 @@ def panel(title: str = "", content: str = "", border: str = "blue") -> None:
 # ---------------------------------------------------------------------------
 # Image encoding
 # ---------------------------------------------------------------------------
+
 
 def image_to_base64(image_path: Path) -> str:
     """Read an image file and return its contents as a base64-encoded string.

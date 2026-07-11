@@ -1,4 +1,5 @@
 """Tests for RFQ schema validation."""
+
 import json
 
 

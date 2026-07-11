@@ -130,15 +130,25 @@ def _merge_agg(a: dict, b: dict) -> dict:
 
 def _zero_agg() -> dict:
     return {
-        "requests": 0, "success": 0, "failures": 0, "retries": 0,
-        "latency_ms": 0, "pages": 0, "images": 0,
-        "input_tokens": 0, "output_tokens": 0, "cost": 0.0,
+        "requests": 0,
+        "success": 0,
+        "failures": 0,
+        "retries": 0,
+        "latency_ms": 0,
+        "pages": 0,
+        "images": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost": 0.0,
     }
 
 
 def _compute_cost(
-    provider: str, monthly_used: int, pages: int = 0,
-    input_tokens: int = 0, output_tokens: int = 0,
+    provider: str,
+    monthly_used: int,
+    pages: int = 0,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
 ) -> float:
     p = PRICING.get(provider)
     if not p:
@@ -200,28 +210,46 @@ class UsageTracker:
         return pd.get(field, 0)
 
     def record_request(
-        self, provider: str, model: str = "", success: bool = True,
-        latency_ms: float = 0, retry_count: int = 0, error: str = "",
-        pages: int = 0, images: int = 0,
-        input_tokens: int = 0, output_tokens: int = 0,
+        self,
+        provider: str,
+        model: str = "",
+        success: bool = True,
+        latency_ms: float = 0,
+        retry_count: int = 0,
+        error: str = "",
+        pages: int = 0,
+        images: int = 0,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
     ) -> None:
         """Record a single API request and update all rollup aggregates."""
         if provider not in PROVIDER_INFO:
             import logging
+
             logging.getLogger("usage").warning("Unknown provider %r — tracking anyway", provider)
         now = time.time()
         day = _day_id(now)
         week = _week_id(now)
         month = _month_id(now)
 
-        monthly_used = self._get_monthly_count(month, provider, "pages" if provider == "vision" else "requests")
+        monthly_used = self._get_monthly_count(
+            month, provider, "pages" if provider == "vision" else "requests"
+        )
         cost = _compute_cost(provider, monthly_used, pages, input_tokens, output_tokens)
 
         entry = {
-            "t": now, "p": provider, "m": model, "ok": success,
-            "l": round(latency_ms, 1), "r": retry_count,
-            "e": error or None, "pg": pages, "im": images,
-            "it": input_tokens, "ot": output_tokens, "c": round(cost, 6),
+            "t": now,
+            "p": provider,
+            "m": model,
+            "ok": success,
+            "l": round(latency_ms, 1),
+            "r": retry_count,
+            "e": error or None,
+            "pg": pages,
+            "im": images,
+            "it": input_tokens,
+            "ot": output_tokens,
+            "c": round(cost, 6),
         }
         recent = self._state.setdefault("requests", [])
         recent.append(entry)
@@ -229,10 +257,15 @@ class UsageTracker:
             self._state["requests"] = recent[-MAX_RECENT:]
 
         agg = {
-            "requests": 1, "success": 1 if success else 0,
-            "failures": 0 if success else 1, "retries": retry_count,
-            "latency_ms": latency_ms, "pages": pages, "images": images,
-            "input_tokens": input_tokens, "output_tokens": output_tokens,
+            "requests": 1,
+            "success": 1 if success else 0,
+            "failures": 0 if success else 1,
+            "retries": retry_count,
+            "latency_ms": latency_ms,
+            "pages": pages,
+            "images": images,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
             "cost": cost,
         }
 

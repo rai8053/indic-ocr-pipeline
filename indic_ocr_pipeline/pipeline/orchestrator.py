@@ -7,14 +7,16 @@ import re
 from typing import Any, Optional
 
 from indic_ocr_pipeline.utils.config import (
-    VALID_CLASSES, NO_TEXT_IN_PICTURE_MARKER, VALID_CLASSES_SET,
+    VALID_CLASSES,
+    NO_TEXT_IN_PICTURE_MARKER,
+    VALID_CLASSES_SET,
 )
 from indic_ocr_pipeline.utils.helpers import warn as _term_warn
-
 
 # ---------------------------------------------------------------------------
 # Prompt builders
 # ---------------------------------------------------------------------------
+
 
 def build_vision_batch_prompt(
     pages_blocks: list[list[dict]],
@@ -35,7 +37,8 @@ def build_vision_batch_prompt(
     class_list = ", ".join(VALID_CLASSES)
     pages_json = json.dumps(
         [{"page_index": i, "raw_blocks": b} for i, b in enumerate(pages_blocks)],
-        ensure_ascii=False, indent=2,
+        ensure_ascii=False,
+        indent=2,
     )
     n_pages = len(pages_blocks)
 
@@ -46,17 +49,17 @@ def build_vision_batch_prompt(
         "grouped by page_index matching image order. For EACH page:\n\n"
         "1. Assign exactly one class per block from this fixed list: {class_list}\n"
         "2. If a block is a table, output its LaTeX (\\begin{{tabular}}{{...}}\\end{{tabular}}) "
-        "in the corresponding block_text element. For ALL other blocks, set block_text to empty string \"\".\n"
+        'in the corresponding block_text element. For ALL other blocks, set block_text to empty string "".\n'
         "3. If a block is a display formula, replace its text with LaTeX in block_text.\n"
         "4. Reorder blocks into natural reading order.\n"
         "5. CRITICAL: The output MUST have exactly the SAME number of blocks as the input. "
         "Every input block must have one matching output block. Do not skip any block.\n"
-        "6. CRITICAL: block_text must be empty string \"\" for any block where text did not change.\n"
+        '6. CRITICAL: block_text must be empty string "" for any block where text did not change.\n'
         "7. Inline formulas that appear within a paragraph should remain inline as part of "
         "the Text block's text -- only assign the Formula class to formulas that appear as "
         "their own separate, visually distinct block on the page.\n"
-        "8. Any block whose text is exactly \"[NO_TEXT_IN_PICTURE]\" is a non-text visual region "
-        "(photo, illustration, diagram, stamp, seal) -- assign it the class \"Picture\" and "
+        '8. Any block whose text is exactly "[NO_TEXT_IN_PICTURE]" is a non-text visual region '
+        '(photo, illustration, diagram, stamp, seal) -- assign it the class "Picture" and '
         "leave the block_text unchanged.\n"
     ).format(class_list=class_list)
 
@@ -81,8 +84,7 @@ def build_vision_batch_prompt(
         )
 
     return (
-        base + extra +
-        f"\nRaw Vision OCR blocks per page:\n{pages_json}\n\n"
+        base + extra + f"\nRaw Vision OCR blocks per page:\n{pages_json}\n\n"
         "Respond with ONLY a JSON object, no markdown fences, no commentary, "
         "in exactly this shape (one entry per page, SAME ORDER as the images):\n"
         f"{out_shape}\n"
@@ -119,7 +121,8 @@ def build_batch_prompt(
 
     pages_json = json.dumps(
         [{"page_index": i, "raw_blocks": b} for i, b in enumerate(truncated)],
-        ensure_ascii=False, indent=None,
+        ensure_ascii=False,
+        indent=None,
     )
     n_pages = len(pages_blocks)
 
@@ -144,6 +147,7 @@ def build_batch_prompt(
 # ---------------------------------------------------------------------------
 # JSON extraction & repair
 # ---------------------------------------------------------------------------
+
 
 def _find_matching_brace(text: str, start: int) -> int:
     """Find the matching closing brace for an opening brace at ``start``."""
@@ -211,8 +215,8 @@ def _extract_json_object(raw_text: str) -> dict:
             text = before
         else:
             fence_end = parts[1].find("```") if len(parts) > 1 else -1
-            fenced = parts[1][:fence_end] if fence_end >= 0 else (
-                parts[1] if len(parts) > 1 else ""
+            fenced = (
+                parts[1][:fence_end] if fence_end >= 0 else (parts[1] if len(parts) > 1 else "")
             )
             if "{" in fenced:
                 text = fenced.strip()
@@ -227,7 +231,7 @@ def _extract_json_object(raw_text: str) -> dict:
     last = _find_matching_brace(text, first)
     if last == -1:
         raise ValueError(f"Unmatched opening brace: {raw_text[:200]!r}")
-    text = text[first:last + 1]
+    text = text[first : last + 1]
 
     try:
         return json.loads(text)
@@ -241,6 +245,7 @@ def _extract_json_object(raw_text: str) -> dict:
 # ---------------------------------------------------------------------------
 # Batch response parser
 # ---------------------------------------------------------------------------
+
 
 def _parse_batch_response(
     raw_text: str,
@@ -269,8 +274,10 @@ def _parse_batch_response(
         and ``block_relations``.
     """
     parsed = _extract_json_object(raw_text)
-    pages = parsed["pages"] if "pages" in parsed else (
-        [parsed] if "block_classes" in parsed and expected_pages == 1 else []
+    pages = (
+        parsed["pages"]
+        if "pages" in parsed
+        else ([parsed] if "block_classes" in parsed and expected_pages == 1 else [])
     )
     if not pages or len(pages) != expected_pages:
         raise ValueError(f"Expected {expected_pages} pages, got {len(pages)}")
@@ -352,6 +359,7 @@ def _parse_batch_response(
             if not order_valid:
                 if original_blocks and page_idx < len(original_blocks):
                     from indic_ocr_pipeline.layout.reading_order import geometry_order
+
                     geo_boxes = [b["box"] for b in original_blocks[page_idx]]
                     order = geometry_order(geo_boxes)
                     if len(order) == n and len(set(order)) == n and max(order) < n:
@@ -405,7 +413,9 @@ def _parse_batch_response(
                     b = final_boxes[i]
                     area = (b[2] - b[0]) * (b[3] - b[1])
                     if area < 1000:
-                        safe_text = t[:60].encode("ascii", errors="backslashreplace").decode("ascii")
+                        safe_text = (
+                            t[:60].encode("ascii", errors="backslashreplace").decode("ascii")
+                        )
                         _term_warn(
                             f"      [Override] Block {i} (orig {orig_idx}): "
                             f"LLM-assigned Picture reclassified to Text - "

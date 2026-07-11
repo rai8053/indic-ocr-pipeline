@@ -1,4 +1,5 @@
 """Tests for reading order detection."""
+
 import json
 
 
@@ -21,10 +22,10 @@ class TestReadingOrder:
         from indic_ocr_pipeline.layout.reading_order import geometry_order
 
         boxes = [
-            [100, 100, 400, 200],   # Left column top
-            [100, 250, 400, 500],   # Left column bottom
-            [450, 100, 800, 300],   # Right column top
-            [450, 350, 800, 500],   # Right column bottom
+            [100, 100, 400, 200],  # Left column top
+            [100, 250, 400, 500],  # Left column bottom
+            [450, 100, 800, 300],  # Right column top
+            [450, 350, 800, 500],  # Right column bottom
         ]
         order = geometry_order(boxes)
         assert len(order) == 4

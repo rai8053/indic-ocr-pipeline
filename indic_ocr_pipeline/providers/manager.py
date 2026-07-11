@@ -8,15 +8,18 @@ from typing import Any, Callable, Optional
 import requests
 
 from indic_ocr_pipeline.utils.config import (
-    RETRY_ATTEMPTS, RETRY_BACKOFF_SECONDS,
-    IAMHC_API_KEY, IAMHC_ENDPOINT, IAMHC_MODEL,
+    RETRY_ATTEMPTS,
+    RETRY_BACKOFF_SECONDS,
+    IAMHC_API_KEY,
+    IAMHC_ENDPOINT,
+    IAMHC_MODEL,
 )
 from indic_ocr_pipeline.utils.helpers import warn as _term_warn, image_to_base64
-
 
 # ---------------------------------------------------------------------------
 # Shared HTTP retry
 # ---------------------------------------------------------------------------
+
 
 def _post_with_retry(
     url: str,
@@ -70,6 +73,7 @@ def _post_with_retry(
 # Shared result parsing
 # ---------------------------------------------------------------------------
 
+
 def _parse_provider_result(
     raw_text: str,
     n_pages: int,
@@ -90,6 +94,7 @@ def _parse_provider_result(
         Parsed page annotation dicts.
     """
     from indic_ocr_pipeline.pipeline.orchestrator import _parse_batch_response
+
     pages_out = _parse_batch_response(raw_text, n_pages, pages_blocks, level)
     if level >= 4:
         for page in pages_out:
@@ -101,11 +106,12 @@ def _parse_provider_result(
 # IAMHC provider (relay with vision + text fallback)
 # ---------------------------------------------------------------------------
 
+
 def _run_iamhc_proofread_batch(
     image_paths: list[Any],
     pages_blocks: list[list[dict]],
     level: int = 3,
-    usage_recorder: Optional[object] = None,
+    usage_recorder: Optional[Any] = None,
 ) -> list[dict]:
     """Run proofreading via IAMHC relay (vision-first, text-only fallback).
 
@@ -127,15 +133,21 @@ def _run_iamhc_proofread_batch(
     if not IAMHC_API_KEY:
         raise RuntimeError("IAMHC_API_KEY not set")
 
-    from indic_ocr_pipeline.pipeline.orchestrator import build_vision_batch_prompt, build_batch_prompt
+    from indic_ocr_pipeline.pipeline.orchestrator import (
+        build_vision_batch_prompt,
+        build_batch_prompt,
+    )
+
     prompt = build_vision_batch_prompt(pages_blocks, level=level)
     content: list[dict] = [{"type": "text", "text": prompt}]
     for img_path in image_paths:
         b64 = image_to_base64(img_path)
-        content.append({
-            "type": "image_url",
-            "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
-        })
+        content.append(
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+            }
+        )
 
     payload: dict = {
         "model": IAMHC_MODEL,
@@ -155,9 +167,14 @@ def _run_iamhc_proofread_batch(
         out_tok = max(1, len(raw_text) // 4)
         if usage_recorder:
             usage_recorder.record_request(
-                "iamhc", success=True, latency_ms=lat,
-                retry_count=retries, pages=n_pages, images=n_pages,
-                input_tokens=in_tok, output_tokens=out_tok,
+                "iamhc",
+                success=True,
+                latency_ms=lat,
+                retry_count=retries,
+                pages=n_pages,
+                images=n_pages,
+                input_tokens=in_tok,
+                output_tokens=out_tok,
             )
         return _parse_provider_result(raw_text, n_pages, pages_blocks, level, "full_level4")
     except Exception as e:
@@ -169,21 +186,35 @@ def _run_iamhc_proofread_batch(
                 "messages": [{"role": "user", "content": text_prompt}],
                 "max_tokens": 16384,
             }
-            resp, retries, lat = _post_with_retry(IAMHC_ENDPOINT, text_payload, headers, timeout=180)
+            resp, retries, lat = _post_with_retry(
+                IAMHC_ENDPOINT, text_payload, headers, timeout=180
+            )
             raw_text = resp.json()["choices"][0]["message"]["content"]
             out_tok = max(1, len(raw_text) // 4)
             if usage_recorder:
                 usage_recorder.record_request(
-                    "iamhc", success=True, latency_ms=lat,
-                    retry_count=retries, pages=n_pages, images=n_pages,
-                    input_tokens=in_tok, output_tokens=out_tok,
+                    "iamhc",
+                    success=True,
+                    latency_ms=lat,
+                    retry_count=retries,
+                    pages=n_pages,
+                    images=n_pages,
+                    input_tokens=in_tok,
+                    output_tokens=out_tok,
                 )
-            return _parse_provider_result(raw_text, n_pages, pages_blocks, level, "degraded_text_only_fallback")
+            return _parse_provider_result(
+                raw_text, n_pages, pages_blocks, level, "degraded_text_only_fallback"
+            )
         except Exception as e2:
             if usage_recorder:
                 usage_recorder.record_request(
-                    "iamhc", success=False, latency_ms=0,
-                    retry_count=0, error=str(e2), pages=n_pages, images=n_pages,
+                    "iamhc",
+                    success=False,
+                    latency_ms=0,
+                    retry_count=0,
+                    error=str(e2),
+                    pages=n_pages,
+                    images=n_pages,
                 )
             raise RuntimeError(f"iamhc vision+text both failed: {e} / {e2}")
 
@@ -192,12 +223,13 @@ def _run_iamhc_proofread_batch(
 # Failover orchestration
 # ---------------------------------------------------------------------------
 
+
 def run_proofread_batch(
     provider: str,
     image_paths: list[Any],
     pages_blocks: list[list[dict]],
     level: int = 3,
-    usage_recorder: Optional[object] = None,
+    usage_recorder: Optional[Any] = None,
 ) -> list[dict]:
     """Run a proofreading batch with automatic failover between providers.
 

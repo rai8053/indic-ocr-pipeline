@@ -49,11 +49,19 @@ def auto_relations(
 
         if best_caption is not None:
             if blocks[best_caption]["box"][1] > tb[1]:
-                relations.append({"source": ti, "target": best_caption, "relation": "table_has_caption"})
-                relations.append({"source": best_caption, "target": ti, "relation": "caption_of_table"})
+                relations.append(
+                    {"source": ti, "target": best_caption, "relation": "table_has_caption"}
+                )
+                relations.append(
+                    {"source": best_caption, "target": ti, "relation": "caption_of_table"}
+                )
             else:
-                relations.append({"source": best_caption, "target": ti, "relation": "caption_of_table"})
-                relations.append({"source": ti, "target": best_caption, "relation": "table_has_caption"})
+                relations.append(
+                    {"source": best_caption, "target": ti, "relation": "caption_of_table"}
+                )
+                relations.append(
+                    {"source": ti, "target": best_caption, "relation": "table_has_caption"}
+                )
 
     # Caption for each figure
     for fi in figure_indices:
@@ -73,11 +81,19 @@ def auto_relations(
 
         if best_caption is not None:
             if blocks[best_caption]["box"][1] > fb[1]:
-                relations.append({"source": fi, "target": best_caption, "relation": "figure_has_caption"})
-                relations.append({"source": best_caption, "target": fi, "relation": "caption_of_figure"})
+                relations.append(
+                    {"source": fi, "target": best_caption, "relation": "figure_has_caption"}
+                )
+                relations.append(
+                    {"source": best_caption, "target": fi, "relation": "caption_of_figure"}
+                )
             else:
-                relations.append({"source": best_caption, "target": fi, "relation": "caption_of_figure"})
-                relations.append({"source": fi, "target": best_caption, "relation": "figure_has_caption"})
+                relations.append(
+                    {"source": best_caption, "target": fi, "relation": "caption_of_figure"}
+                )
+                relations.append(
+                    {"source": fi, "target": best_caption, "relation": "figure_has_caption"}
+                )
 
     # Footnote references
     done: set[int] = set()

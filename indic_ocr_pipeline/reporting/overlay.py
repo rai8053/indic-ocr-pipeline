@@ -60,8 +60,14 @@ def draw_overlay(
         (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
         cv2.rectangle(overlay, (x1, y1 - th - 4), (x1 + tw + 4, y1), color, -1)
         cv2.putText(
-            overlay, label, (x1 + 2, y1 - 2),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1, cv2.LINE_AA,
+            overlay,
+            label,
+            (x1 + 2, y1 - 2),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.4,
+            (0, 0, 0),
+            1,
+            cv2.LINE_AA,
         )
 
     if show_reading_order and reading_order and len(reading_order) > 1:
@@ -77,8 +83,14 @@ def draw_overlay(
             cv2.arrowedLine(overlay, (sx, sy), (dx, dy), (255, 255, 255), 2, tipLength=0.15)
             mid_x, mid_y = (sx + dx) // 2, (sy + dy) // 2
             cv2.putText(
-                overlay, str(k + 1), (mid_x, mid_y),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA,
+                overlay,
+                str(k + 1),
+                (mid_x, mid_y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 255, 255),
+                2,
+                cv2.LINE_AA,
             )
 
     if show_relations and relations:
@@ -94,8 +106,14 @@ def draw_overlay(
             ty = int((boxes[t][1] + boxes[t][3]) / 2)
             cv2.arrowedLine(overlay, (sx, sy), (tx, ty), (0, 255, 255), 1, tipLength=0.1)
             cv2.putText(
-                overlay, rtype, ((sx + tx) // 2, (sy + ty) // 2 - 5),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 255), 1, cv2.LINE_AA,
+                overlay,
+                rtype,
+                ((sx + tx) // 2, (sy + ty) // 2 - 5),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.35,
+                (0, 255, 255),
+                1,
+                cv2.LINE_AA,
             )
 
     legend_x = 10
@@ -104,19 +122,32 @@ def draw_overlay(
         overlay,
         (legend_x - 5, legend_y - 5),
         (legend_x + 160, legend_y + 30 * len(VALID_CLASSES) + 5),
-        (0, 0, 0), -1,
+        (0, 0, 0),
+        -1,
     )
     cv2.putText(
-        overlay, "Legend:", (legend_x, legend_y + 15),
-        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA,
+        overlay,
+        "Legend:",
+        (legend_x, legend_y + 15),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.4,
+        (255, 255, 255),
+        1,
+        cv2.LINE_AA,
     )
     for idx, cls in enumerate(VALID_CLASSES):
         color = CLASS_COLORS.get(cls, (200, 200, 200))
         ly = legend_y + 30 * (idx + 1)
         cv2.rectangle(overlay, (legend_x, ly - 10), (legend_x + 15, ly + 5), color, -1)
         cv2.putText(
-            overlay, cls, (legend_x + 20, ly),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA,
+            overlay,
+            cls,
+            (legend_x + 20, ly),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.35,
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA,
         )
 
     output_path = Path(output_path)
