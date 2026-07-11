@@ -390,19 +390,25 @@ graph TB
 
 ```mermaid
 graph TD
-    A["Annotation JSON"] --> B["Required fields<br/>image, block_boxes,<br/>block_classes, block_text"]
-    B --> C{"All present?"}
-    C -->|No| ERR1["❌ Error: missing field"]
-    C -->|Yes| D["Array lengths match<br/>boxes == classes == text"]
-    D --> E{"Equal length?"}
-    E -->|No| ERR2["❌ Error: length mismatch"]
-    E -->|Yes| F["Box validation<br/>x2>x1, y2>y1, area≥500"]
+    A["Annotation JSON"] --> B{"Required fields<br/>image, block_boxes,<br/>block_classes, block_text"}
+    B -->|Missing| ERR1["❌ Return errors"]
+    B -->|Present| C{"At least 1 block"}
+    C -->|No| ERR2["❌ Non-empty fail"]
+    C -->|Yes| D["Array lengths<br/>boxes == classes == text"]
+    D --> E{"Match?"}
+    E -->|No| ERR3["❌ Length mismatch"]
+    E -->|Yes| F["Box validation<br/>x2>x1, y2>y1,<br/>not normalized<br/>area ≥ 500"]
     F --> G["Class validation<br/>all in VALID_CLASSES_SET"]
-    G --> H["Duplicate detection<br/>boxes, text"]
-    H --> I["Overlap detection<br/>>50% overlap → warning"]
-    I --> J["Level 4 checks<br/>reading_order, relations"]
-    J --> K["Quality scoring<br/>0-100 per category"]
-    K --> L["✅ Validated + Scored"]
+    G --> H["Duplicate detection<br/>identical boxes + text"]
+    H --> I["Overlap detection<br/>>50% overlap → WARN"]
+    I --> J["Empty text ratio<br/><50% empty → PASS"]
+    J --> K{"Level 4?"}
+    K -->|No| L1["Score: ro=0, rels=0<br/>ocr+layout+boxes"]
+    K -->|Yes| L2["Score: all 5 categories<br/>ocr+layout+ro+boxes+rels"]
+    L1 --> M["✅ Validated + Scored"]
+    L2 --> M
+
+```
 
 ---
 
