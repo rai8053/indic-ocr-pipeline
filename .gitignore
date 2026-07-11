@@ -4,3 +4,5 @@ __pycache__/
 .pipeline_quota_state.json
 output/
 test_slice/
+
+*.pdf
