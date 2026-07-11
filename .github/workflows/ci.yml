@@ -19,13 +19,11 @@ jobs:
           python-version: "3.10"
       - name: Install dependencies
         run: |
-          pip install black ruff isort
+          pip install black ruff
       - name: Check formatting with black
         run: black --check --diff .
       - name: Lint with ruff
         run: ruff check .
-      - name: Check imports with isort
-        run: isort --check-only --diff .
 
   typecheck:
     runs-on: ubuntu-latest

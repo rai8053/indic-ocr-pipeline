@@ -68,6 +68,3 @@ ignore = [
 "__init__.py" = ["F401"]
 "tests/*" = ["S101"]
 
-[tool.isort]
-profile = "black"
-line_length = 100
