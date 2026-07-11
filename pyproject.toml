@@ -43,7 +43,7 @@ repository = "https://github.com/rai8053/indic-ocr-pipeline"
 changelog = "https://github.com/rai8053/indic-ocr-pipeline/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
-packages = {find = {include = ["indic_ocr*", "core*", "layout*", "utils*", "validation*", "preprocessing*", "qa*", "report*"]}}
+packages = {find = {include = ["indic_ocr*", "core*", "layout*", "utils*", "validation*", "preprocessing*", "qa*", "report*", "pipeline*"]}}
 
 [tool.black]
 line-length = 100
