@@ -53,8 +53,8 @@ async def providers():
 @app.get("/metrics")
 async def metrics():
     """Return usage metrics from quota state."""
-    from core.config import QUOTA_STATE_FILE
-    from utils.usage import UsageTracker
+    from indic_ocr_pipeline.utils.config import QUOTA_STATE_FILE
+    from indic_ocr_pipeline.utils.usage import UsageTracker
 
     tracker = UsageTracker(QUOTA_STATE_FILE)
     data = tracker.dashboard()
@@ -91,7 +91,7 @@ async def annotate(
         content = await file.read()
         pdf_path.write_bytes(content)
 
-        from pipeline.runner import process_pdf
+        from indic_ocr_pipeline.pipeline.runner import process_pdf
 
         process_pdf(
             pdf_path=pdf_path,

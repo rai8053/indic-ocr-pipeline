@@ -1,5 +1,5 @@
 """Tests for configuration module."""
-from core.config import (
+from indic_ocr_pipeline.utils.config import (
     VALID_CLASSES,
     VALID_CLASSES_SET,
     VALID_RELATIONS,

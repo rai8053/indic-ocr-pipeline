@@ -4,14 +4,14 @@ import json
 
 class TestValidation:
     def test_valid_page_passes(self, sample_page_path):
-        from validation.schema import validate_page
+        from indic_ocr_pipeline.layout.validator import validate_page
 
         result = validate_page(sample_page_path)
         assert result["valid"] is True
         assert len(result.get("errors", [])) == 0
 
     def test_duplicate_boxes_warn(self, tmp_path):
-        from validation.schema import validate_page
+        from indic_ocr_pipeline.layout.validator import validate_page
 
         data = {
             "image": "test.jpg",
@@ -26,7 +26,7 @@ class TestValidation:
         assert result["checks"]["duplicate_boxes"] == "WARN"
 
     def test_empty_invalid(self, tmp_path):
-        from validation.schema import validate_page
+        from indic_ocr_pipeline.layout.validator import validate_page
 
         data = {"image": "test.jpg", "block_boxes": [], "block_classes": [], "block_text": []}
         path = tmp_path / "empty.json"
@@ -36,7 +36,7 @@ class TestValidation:
         assert not result["valid"]
 
     def test_missing_required_field(self, tmp_path):
-        from validation.schema import validate_page
+        from indic_ocr_pipeline.layout.validator import validate_page
 
         data = {"block_boxes": [], "block_classes": [], "block_text": []}
         path = tmp_path / "nofield.json"
@@ -47,7 +47,7 @@ class TestValidation:
         assert any("Missing fields" in e for e in result.get("errors", []))
 
     def test_class_count_in_output(self, sample_page_path):
-        from validation.schema import validate_page
+        from indic_ocr_pipeline.layout.validator import validate_page
 
         result = validate_page(sample_page_path)
         assert result["class_count"] > 0

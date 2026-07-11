@@ -1,5 +1,5 @@
 """Tests for automatic relation detection."""
-from layout.relations import auto_relations
+from indic_ocr_pipeline.layout.relations import auto_relations
 
 
 class TestRelations:

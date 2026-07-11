@@ -4,7 +4,7 @@ import json
 
 class TestReadingOrder:
     def test_geometry_order_simple(self):
-        from layout.reading_order import geometry_order
+        from indic_ocr_pipeline.layout.reading_order import geometry_order
 
         boxes = [
             [100, 100, 500, 150],  # Title (top)
@@ -18,7 +18,7 @@ class TestReadingOrder:
         assert order[2] == 2  # Then second paragraph
 
     def test_geometry_order_two_column(self):
-        from layout.reading_order import geometry_order
+        from indic_ocr_pipeline.layout.reading_order import geometry_order
 
         boxes = [
             [100, 100, 400, 200],   # Left column top
@@ -30,13 +30,13 @@ class TestReadingOrder:
         assert len(order) == 4
 
     def test_geometry_order_rejects_empty(self):
-        from layout.reading_order import geometry_order
+        from indic_ocr_pipeline.layout.reading_order import geometry_order
 
         order = geometry_order([])
         assert order == []
 
     def test_geometry_order_no_overlap(self):
-        from layout.reading_order import geometry_order
+        from indic_ocr_pipeline.layout.reading_order import geometry_order
 
         boxes = [
             [0, 0, 100, 50],
