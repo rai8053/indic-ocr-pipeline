@@ -1000,7 +1000,8 @@ def main() -> None:
         "zip": True,
     }
 
-    while True:
+    def _show_detected_documents() -> list[str]:
+        """Show detected documents table and return sorted language keys."""
         lang_groups: dict[str, list[str]] = {}
         for pdf in pdfs:
             lang = detect_language(pdf.name)
@@ -1035,28 +1036,28 @@ def main() -> None:
                 count = len(lang_groups[k])
                 total_p = sum(get_page_count(BASE / f) or 0 for f in lang_groups[k])
                 raw(f"  [{i:02d}] {LANG_DISPLAY.get(k, k.capitalize()):<12s} {count} PDFs  {total_p} pages")
-        print("  [S]ettings  [Q]uota  [E]xit")
-        print()
-        raw_in = input("  Choice: ").strip().upper()
+        return sorted_langs
 
-        if raw_in == "E":
-            info("  Exiting.")
-            sys.exit(0)
-        if raw_in == "Q":
-            show_quota_monitor(settings)
-            continue
-        if raw_in == "S":
-            settings = show_settings(settings)
-            continue
-
+    def _process_pdfs_flow(settings: dict[str, Any]) -> None:
+        """Run the full Process PDFs workflow."""
+        sorted_langs = _show_detected_documents()
+        raw_in = input("  Select language (number) or [B]ack: ").strip().upper()
+        if raw_in == "B":
+            return
         try:
             lang_idx = int(raw_in) - 1
             if lang_idx < 0 or lang_idx >= len(sorted_langs):
                 warn("  Invalid choice.")
-                continue
+                return
         except ValueError:
             warn("  Invalid choice.")
-            continue
+            return
+
+        lang_groups: dict[str, list[str]] = {}
+        for pdf in pdfs:
+            lang = detect_language(pdf.name)
+            if lang != "unknown":
+                lang_groups.setdefault(lang, []).append(pdf.name)
 
         lang_key = sorted_langs[lang_idx]
         files = lang_groups[lang_key]
@@ -1073,7 +1074,7 @@ def main() -> None:
         raw2 = input("  Select PDFs (comma/range, or 0 for all): ").strip()
 
         if raw2.upper() == "B":
-            continue
+            return
         if not raw2 or raw2 == "0":
             selected_files = files
         else:
@@ -1095,9 +1096,8 @@ def main() -> None:
 
         if not selected_files:
             warn("  No PDFs selected.")
-            continue
+            return
 
-        selected = {lang_key: selected_files}
         mp = ask_int("  Pages per PDF (0 = all)", default=0)
 
         total_est = 0
@@ -1123,15 +1123,49 @@ def main() -> None:
         proceed = input("  Start Processing? (Y/N): ").strip().upper()
         if proceed != "Y":
             info("  Returned to menu.")
-            continue
+            return
 
         all_stats: list[dict[str, Any]] = []
+        selected = {lang_key: selected_files}
         for lk, flist in selected.items():
             stats = run_for_language(lk, flist, mp, settings)
             all_stats.append(stats)
 
         display_summary(all_stats)
         rule()
+
+    while True:
+        print()
+        rule(char="=")
+        bold("                              Main Menu")
+        rule(char="=")
+        menu_item(1, "Process PDFs")
+        menu_item(2, "Settings")
+        menu_item(3, "Provider Quotas")
+        menu_item(4, "Benchmark")
+        menu_item(5, "View Previous Reports")
+        menu_item(6, "About")
+        print("  [Q] Quit")
+        print()
+        raw_in = input("  Select > ").strip().upper()
+
+        if raw_in == "Q":
+            info("  Exiting.")
+            sys.exit(0)
+        elif raw_in == "1":
+            _process_pdfs_flow(settings)
+        elif raw_in == "2":
+            settings = show_settings(settings)
+        elif raw_in == "3":
+            show_quota_monitor(settings)
+        elif raw_in == "4":
+            info("  Benchmark: Not yet implemented.")
+        elif raw_in == "5":
+            info("  View Previous Reports: Not yet implemented.")
+        elif raw_in == "6":
+            info("  About: Not yet implemented.")
+        else:
+            warn("  Invalid choice.")
 
 
 if __name__ == "__main__":
