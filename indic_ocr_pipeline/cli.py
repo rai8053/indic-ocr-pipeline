@@ -1008,15 +1008,33 @@ def main() -> None:
                 lang_groups.setdefault(lang, []).append(pdf.name)
         sorted_langs = sorted(lang_groups.keys(), key=lambda k: -len(lang_groups[k]))
 
-        rule("Select Language")
-        for i, k in enumerate(sorted_langs, 1):
-            count = len(lang_groups[k])
-            menu_item(
-                i,
-                LANG_DISPLAY.get(k, k.capitalize()),
-                f"({count} PDF{'s' if count != 1 else ''})",
-            )
-        rule()
+        raw("\n  [bold]Detected Documents[/bold]")
+        c2 = __import__("indic_ocr_pipeline.utils.helpers", fromlist=["_get_console"])._get_console()
+        if c2 is not None:
+            try:
+                from rich import box
+                from rich.table import Table
+
+                t = Table(box=box.HEAVY, padding=(0, 2))
+                t.add_column("ID", justify="right", width=4, style="bold cyan")
+                t.add_column("Language", style="bold")
+                t.add_column("PDFs", justify="right")
+                t.add_column("Pages", justify="right")
+                for i, k in enumerate(sorted_langs, 1):
+                    count = len(lang_groups[k])
+                    total_p = sum(get_page_count(BASE / f) or 0 for f in lang_groups[k])
+                    t.add_row(str(i), LANG_DISPLAY.get(k, k.capitalize()), str(count), str(total_p))
+                c2.print(t)
+            except Exception:
+                for i, k in enumerate(sorted_langs, 1):
+                    count = len(lang_groups[k])
+                    total_p = sum(get_page_count(BASE / f) or 0 for f in lang_groups[k])
+                    raw(f"  [{i:02d}] {LANG_DISPLAY.get(k, k.capitalize()):<12s} {count} PDFs  {total_p} pages")
+        else:
+            for i, k in enumerate(sorted_langs, 1):
+                count = len(lang_groups[k])
+                total_p = sum(get_page_count(BASE / f) or 0 for f in lang_groups[k])
+                raw(f"  [{i:02d}] {LANG_DISPLAY.get(k, k.capitalize()):<12s} {count} PDFs  {total_p} pages")
         print("  [S]ettings  [Q]uota  [E]xit")
         print()
         raw_in = input("  Choice: ").strip().upper()
