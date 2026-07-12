@@ -73,9 +73,10 @@ def detect_language(fname: str) -> str:
     return "unknown"
 
 
-def print_banner(available_langs: set[str]) -> None:
+def print_banner(available_langs: set[str] | None = None) -> None:
+    langs = sorted(LANG_DISPLAY.keys())
     langs_str = "\n  " + "\n  ".join(
-        f"* {LANG_DISPLAY.get(l, l.capitalize())}" for l in sorted(available_langs)
+        f"* {LANG_DISPLAY[l]}" for l in langs if l != "unknown"
     )
     banner("OCR PAGE", "RFQ Level 4 Pipeline")
     rule("Supported Languages")
