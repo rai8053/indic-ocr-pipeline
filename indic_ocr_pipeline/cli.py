@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import re
-import shutil
 import subprocess
 import sys
 import time
@@ -14,8 +13,6 @@ from typing import Any
 
 from indic_ocr_pipeline.utils.config import QUOTA_STATE_FILE
 from indic_ocr_pipeline.utils.helpers import (
-    STYLE_ACCENT,
-    STYLE_DIM,
     banner,
     bold,
     err,
@@ -93,9 +90,10 @@ def zip_output(lang_key: str, lang_dir: Path) -> None:
 
 
 class Dashboard:
-    """Live progress dashboard supporting both Rich (terminal) and ASCII fallback."""
+    """Live progress dashboard with stage progress bars, provider info, and timing."""
 
     STAGES = ["Rendering", "OCR", "LLM", "Relations", "Validation", "QA", "Report", "ZIP"]
+    DISPLAY_STAGES = ["OCR", "Layout", "Validation"]
 
     def __init__(self, total_pages: int = 0) -> None:
         self._start = time.time()
@@ -106,92 +104,17 @@ class Dashboard:
         self._current_stage = ""
         self._stage_status: dict[str, str] = {s: " " for s in self.STAGES}
         self._api_usage: dict[str, int] = {}
-        self._has_rich = False
-        self._first_ascii = True
+        self._latency: float = 0.0
+        self._tokens: int = 0
+        self._retry: int = 0
+        self._provider: str = ""
+        self._first = True
 
-        try:
-            from rich.console import Group as _RGroup
-            from rich.live import Live as _RL
-            from rich.progress import BarColumn as _RB
-            from rich.progress import Progress as _RP
-            from rich.progress import TextColumn as _RTC
-            from rich.progress import TimeElapsedColumn as _RTE
-            from rich.progress import TimeRemainingColumn as _RTR
-            from rich.table import Table as _RT
-            from rich.text import Text as _RText
+    def _bar(self, pct: int, width: int = 19) -> str:
+        filled = int(width * pct / 100)
+        return "\u2588" * filled + "\u2591" * (width - filled)
 
-            self._has_rich = True
-            self._RText = _RText
-            self._RT = _RT
-            self._RGroup = _RGroup
-            self._progress = _RP(
-                _RTC("{task.completed}/{task.total}"),
-                _RB(),
-                _RTC("{task.percentage:>3.0f}%"),
-                _RTE(),
-                _RTR(),
-            )
-            self._task = self._progress.add_task("", total=max(total_pages, 1))
-            self._live = _RL(self._build_rich(), refresh_per_second=4)
-            self._live.start()
-        except ImportError:
-            pass
-
-    def _build_rich(self):
-        if self._total_pages:
-            self._progress.update(self._task, completed=self._pages_done, total=self._total_pages)
-
-        info = self._RT.grid(padding=(0, 2))
-        info.add_column(style=STYLE_ACCENT)
-        info.add_column()
-        info.add_row("PDF:", self._pdf_name or "(waiting)")
-        info.add_row(
-            "Page:",
-            self._RText.assemble(
-                (self._current_page or "--", "bold"),
-                "     ",
-                ("Stage:", STYLE_DIM),
-                " ",
-                (self._current_stage or "--", STYLE_ACCENT),
-            ),
-        )
-
-        stages_cells = [self._RText("Stages: ", style="bold")]
-        for s in self.STAGES:
-            st = self._stage_status.get(s, " ")
-            if st == "done":
-                stages_cells.append(self._RText(f"[OK] {s}  ", style="green"))
-            elif st == "current":
-                stages_cells.append(self._RText(f">> {s}  ", style=STYLE_ACCENT))
-            else:
-                stages_cells.append(self._RText(f"[ ] {s}  ", style=STYLE_DIM))
-        stages = self._RT.grid()
-        stages.add_row(self._RText.assemble(*stages_cells))
-
-        usage_cells = [self._RText("API: ", style="bold")]
-        for prov, count in sorted(self._api_usage.items()):
-            usage_cells.append(self._RText(f"{prov}:{count}  ", style="yellow"))
-        usage = self._RT.grid()
-        if self._api_usage:
-            usage.add_row(self._RText.assemble(*usage_cells))
-
-        return (
-            self._RGroup(info, self._progress, stages, usage)
-            if self._api_usage
-            else self._RGroup(info, self._progress, stages)
-        )
-
-    def _build_ascii(self) -> str:
-        try:
-            cols = shutil.get_terminal_size().columns
-        except Exception:
-            cols = 80
-        bar_w = min(cols - 35, 40)
-        bar_w = max(bar_w, 10)
-        pct = self._pages_done / self._total_pages if self._total_pages > 0 else 0
-        filled = int(bar_w * pct)
-        bar = "\u2588" * filled + "\u2591" * (bar_w - filled)
-
+    def _build_display(self) -> str:
         elapsed = time.time() - self._start
         e_min, e_sec = int(elapsed // 60), int(elapsed % 60)
         elapsed_str = f"{e_min:02d}:{e_sec:02d}"
@@ -201,28 +124,59 @@ class Dashboard:
         else:
             eta_str = "--:--"
 
-        stage_parts: list[str] = []
-        for s in self.STAGES:
-            st = self._stage_status.get(s, " ")
-            if st == "done":
-                stage_parts.append(f"[OK] {s}")
-            elif st == "current":
-                stage_parts.append(f">> {s}")
-            else:
-                stage_parts.append(f"[ ] {s}")
+        # Compute stage progress for display
+        stages = self._stage_status
+        stage_order = ["Rendering", "OCR", "LLM", "Relations", "Validation", "QA", "Report", "ZIP"]
+        current_idx = -1
+        for i, s in enumerate(stage_order):
+            if stages.get(s) == "current":
+                current_idx = i
+                break
+            elif stages.get(s) == "done":
+                current_idx = i
+
+        ocr_pct = 0
+        if current_idx >= 2:
+            ocr_pct = 100
+        elif stages.get("OCR") == "current":
+            ocr_pct = 72
+
+        layout_pct = 0
+        if current_idx >= 4 or stages.get("Relations") == "current":
+            layout_pct = 100
+        elif stages.get("LLM") == "current":
+            layout_pct = 51
+
+        val_pct = 0
+        if current_idx >= 5:
+            val_pct = 100
+        elif stages.get("Validation") == "current":
+            val_pct = 51
+
+        prov_line = ""
+        if self._provider:
+            prov_line = f"\n  Provider      {self._provider}"
+            if self._latency:
+                prov_line += f"\n  Latency       {self._latency:.2f} s"
+            if self._tokens:
+                prov_line += f"\n  Tokenes        {self._tokens:,}"
+            prov_line += f"\n  Retry         {self._retry}"
 
         lines = [
-            f"  PDF: {self._pdf_name}",
-            f"  Page: {self._current_page or '--'}     Stage: {self._current_stage}",
-            f"  [{bar}]  {self._pages_done}/{self._total_pages}  {pct*100:.0f}%",
-            f"  Elapsed: {elapsed_str}   ETA: {eta_str}",
-            "  " + "  ".join(stage_parts),
+            "",
+            "  " + "-" * 78,
+            "",
+            f"  Processing: {self._pdf_name}",
+            "",
+            f"  Page          {self._current_page or '--'} / {self._total_pages}",
+            f"  OCR           {self._bar(ocr_pct)} {ocr_pct}%",
+            f"  Layout        {self._bar(layout_pct)} {layout_pct}%",
+            f"  Validation    {self._bar(val_pct)} {val_pct}%",
+            prov_line,
+            "",
+            f"  Elapsed       {elapsed_str}",
+            f"  ETA           {eta_str}",
         ]
-        if self._api_usage:
-            usage_str = "  API: " + " ".join(
-                f"{p}={c}" for p, c in sorted(self._api_usage.items(), key=lambda x: -x[1])
-            )
-            lines.append(usage_str)
         return "\n".join(lines)
 
     def update(
@@ -244,20 +198,24 @@ class Dashboard:
 
     def update_usage(self, provider: str, count: int) -> None:
         self._api_usage[provider] = count
+        self._provider = provider
+        self._redraw()
+
+    def update_perf(self, latency: float = 0, tokens: int = 0, retry: int = 0) -> None:
+        self._latency = latency
+        self._tokens = tokens
+        self._retry = retry
         self._redraw()
 
     def _redraw(self) -> None:
-        if self._has_rich:
-            self._live.update(self._build_rich())
+        block = self._build_display()
+        n = block.count("\n") + 1
+        if self._first:
+            self._first = False
+            sys.stdout.write(block)
         else:
-            block = self._build_ascii()
-            n = block.count("\n") + 1
-            if self._first_ascii:
-                self._first_ascii = False
-                sys.stdout.write("\n" + block)
-            else:
-                sys.stdout.write("\033[" + str(n) + "A\r" + block)
-            sys.stdout.flush()
+            sys.stdout.write("\033[" + str(n) + "A\r" + block)
+        sys.stdout.flush()
 
     def __enter__(self) -> Dashboard:
         return self
@@ -266,11 +224,7 @@ class Dashboard:
         self.close()
 
     def close(self) -> None:
-        if self._has_rich:
-            self._live.stop()
-            print()
-        else:
-            print()
+        print()
 
 
 def get_page_count(pdf_path: Path) -> int | None:
