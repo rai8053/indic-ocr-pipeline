@@ -1,7 +1,11 @@
 .env
 __pycache__/
 *.pyc
+*.egg-info/
 .pipeline_quota_state.json
+.pytest_cache/
+.coverage
+coverage.xml
 output/
 test_slice/
 
