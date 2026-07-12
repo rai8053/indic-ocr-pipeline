@@ -24,6 +24,14 @@ LANG_DISPLAY: dict[str, str] = {
     "marathi": "Marathi",
     "telugu": "Telugu",
     "tamil": "Tamil",
+    "hindi": "Hindi",
+    "bengali": "Bengali",
+    "gujarati": "Gujarati",
+    "assamese": "Assamese",
+    "punjabi": "Punjabi",
+    "urdu": "Urdu",
+    "malayalam": "Malayalam",
+    "kannada": "Kannada",
     "unknown": "Unknown",
 }
 
@@ -32,6 +40,14 @@ LANG_PATTERNS: dict[str, list[str]] = {
     "marathi": [r"(?i)marathi|baldarshan"],
     "telugu": [r"(?i)telugu|adikaara|basha"],
     "tamil": [r"(?i)tamil|tnla"],
+    "hindi": [r"(?i)hindi"],
+    "bengali": [r"(?i)bengali|bangla"],
+    "gujarati": [r"(?i)gujarati"],
+    "assamese": [r"(?i)assamese|asamiya"],
+    "punjabi": [r"(?i)punjabi|gurmukhi"],
+    "urdu": [r"(?i)urdu"],
+    "malayalam": [r"(?i)malayalam"],
+    "kannada": [r"(?i)kannada"],
 }
 
 

@@ -377,7 +377,11 @@ def main() -> None:
     parser.add_argument(
         "--lang",
         default="",
-        help="Target language, e.g. tamil (auto-detected if omitted)",
+        help=(
+            "Target language: odia, tamil, telugu, marathi, hindi, bengali, "
+            "gujarati, assamese, punjabi, urdu, malayalam, kannada "
+            "(auto-detected if omitted)"
+        ),
     )
     parser.add_argument("--out", required=True, help="Output directory")
     parser.add_argument("--dpi", type=int, default=150, help="Render DPI (default 150)")
