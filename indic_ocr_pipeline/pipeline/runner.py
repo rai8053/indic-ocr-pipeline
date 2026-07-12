@@ -395,7 +395,7 @@ def main() -> None:
         "--provider",
         choices=["openrouter", "gemini", "groq", "glm", "iamhc"],
         default="gemini",
-        help="Primary LLM provider. Failover: gemini->glm->openrouter, glm->openrouter",
+        help="Primary LLM provider: gemini, glm, iamhc, openrouter, groq (default gemini, failover auto-chains)",
     )
     parser.add_argument(
         "--level",
@@ -440,6 +440,13 @@ def main() -> None:
         help="Generate HTML quality report with RFQ scores",
     )
     args = parser.parse_args()
+
+    if args.lang and args.lang not in LANGUAGE_HINTS:
+        parser.error(f"Unknown language '{args.lang}'. Valid: {', '.join(LANGUAGE_HINTS)}")
+
+    valid_providers = {"gemini", "glm", "iamhc", "openrouter", "groq"}
+    if args.provider not in valid_providers:
+        parser.error(f"Unknown provider '{args.provider}'. Valid: {', '.join(sorted(valid_providers))}")
 
     process_pdf(
         Path(args.pdf),

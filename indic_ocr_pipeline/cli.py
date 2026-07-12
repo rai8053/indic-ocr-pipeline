@@ -70,45 +70,15 @@ def print_banner(available_langs: set[str]) -> None:
     rule("Features")
     print(
         "  +  OCR (Google Cloud Vision)\n"
-        "  +  Level 4 Annotation (Gemini / GLM)\n"
+        "  +  13-class RFQ Layout Detection\n"
+        "  +  Reading Order + Caption Relations\n"
+        "  +  5-Provider LLM Failover\n"
         "  +  Validation & Scoring\n"
         "  +  Visual QA Overlay\n"
         "  +  HTML Quality Report\n"
         "  +  ZIP Export"
     )
     rule()
-
-
-def choose(prompt: str, options: list[tuple[str, Any]], multi: bool = False) -> Any:
-    for i, (label, _) in enumerate(options, 1):
-        print(f"  [{i}] {label}")
-    print(f"  [0] {'Process All' if multi else 'Cancel'}")
-    while True:
-        try:
-            raw_in = input(f"{prompt}: ").strip()
-            if multi:
-                if raw_in == "0":
-                    return list(range(len(options)))
-                indices: list[int] = []
-                for part in raw_in.split(","):
-                    part = part.strip()
-                    if not part:
-                        continue
-                    if "-" in part:
-                        a, b = map(int, part.split("-"))
-                        indices.extend(range(a - 1, b))
-                    else:
-                        indices.append(int(part) - 1)
-                return [i for i in indices if 0 <= i < len(options)]
-            else:
-                idx = int(raw_in)
-                if idx == 0:
-                    return None
-                if 1 <= idx <= len(options):
-                    return idx - 1
-        except (ValueError, IndexError):
-            pass
-        warn("  Invalid choice, try again.")
 
 
 def ask_int(prompt: str, default: int = 0) -> int:
@@ -789,12 +759,22 @@ def run_checks() -> None:
             _check_result("warn", f"Package: {pkg} not found", fix_cmd)
 
     # API Keys
-    from indic_ocr_pipeline.utils.config import GEMINI_API_KEY, GLM_API_KEY, GOOGLE_VISION_API_KEY
+    from indic_ocr_pipeline.utils.config import (
+        GEMINI_API_KEY,
+        GLM_API_KEY,
+        GOOGLE_VISION_API_KEY,
+        GROQ_API_KEY,
+        IAMHC_API_KEY,
+        OPENROUTER_API_KEY,
+    )
 
     keys = [
         ("Google Cloud Vision", GOOGLE_VISION_API_KEY, "GOOGLE_VISION_API_KEY"),
         ("Gemini", GEMINI_API_KEY, "GEMINI_API_KEY"),
         ("GLM-4V", GLM_API_KEY, "GLM_API_KEY"),
+        ("Groq", GROQ_API_KEY, "GROQ_API_KEY"),
+        ("OpenRouter", OPENROUTER_API_KEY, "OPENROUTER_API_KEY"),
+        ("IAMHC", IAMHC_API_KEY, "IAMHC_API_KEY"),
     ]
     for name, val, env_var in keys:
         if val:
@@ -860,9 +840,10 @@ def show_settings(current: dict[str, Any]) -> dict[str, Any]:
         if raw_in == "0":
             return current
         elif raw_in == "1":
-            print("  Providers: [1] gemini  [2] glm")
+            print("  Providers: [1] gemini  [2] glm  [3] iamhc  [4] openrouter  [5] groq")
             c = input("  Choose: ").strip()
-            current["provider"] = "glm" if c == "2" else "gemini"
+            providers = {"1": "gemini", "2": "glm", "3": "iamhc", "4": "openrouter", "5": "groq"}
+            current["provider"] = providers.get(c, "gemini")
         elif raw_in == "2":
             c = input("  Level (3 or 4) [4]: ").strip()
             current["level"] = 3 if c == "3" else 4
