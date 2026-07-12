@@ -13,7 +13,20 @@ from pathlib import Path
 from typing import Any
 
 from indic_ocr_pipeline.utils.config import QUOTA_STATE_FILE
-from indic_ocr_pipeline.utils.helpers import banner, bold, err, info, ok, raw, rule, warn
+from indic_ocr_pipeline.utils.helpers import (
+    STYLE_ACCENT,
+    STYLE_DIM,
+    banner,
+    bold,
+    err,
+    info,
+    kv,
+    menu_item,
+    ok,
+    raw,
+    rule,
+    warn,
+)
 from indic_ocr_pipeline.utils.usage import UsageTracker
 
 BASE = Path(__file__).resolve().parent.parent
@@ -150,7 +163,7 @@ class Dashboard:
             self._progress.update(self._task, completed=self._pages_done, total=self._total_pages)
 
         info = self._RT.grid(padding=(0, 2))
-        info.add_column(style="bold cyan")
+        info.add_column(style=STYLE_ACCENT)
         info.add_column()
         info.add_row("PDF:", self._pdf_name or "(waiting)")
         info.add_row(
@@ -158,9 +171,9 @@ class Dashboard:
             self._RText.assemble(
                 (self._current_page or "--", "bold"),
                 "     ",
-                ("Stage:", "dim"),
+                ("Stage:", STYLE_DIM),
                 " ",
-                (self._current_stage or "--", "bold blue"),
+                (self._current_stage or "--", STYLE_ACCENT),
             ),
         )
 
@@ -170,9 +183,9 @@ class Dashboard:
             if st == "done":
                 stages_cells.append(self._RText(f"[OK] {s}  ", style="green"))
             elif st == "current":
-                stages_cells.append(self._RText(f">> {s}  ", style="bold blue"))
+                stages_cells.append(self._RText(f">> {s}  ", style=STYLE_ACCENT))
             else:
-                stages_cells.append(self._RText(f"[ ] {s}  ", style="dim"))
+                stages_cells.append(self._RText(f"[ ] {s}  ", style=STYLE_DIM))
         stages = self._RT.grid()
         stages.add_row(self._RText.assemble(*stages_cells))
 
@@ -198,7 +211,7 @@ class Dashboard:
         bar_w = max(bar_w, 10)
         pct = self._pages_done / self._total_pages if self._total_pages > 0 else 0
         filled = int(bar_w * pct)
-        bar = "#" * filled + " " * (bar_w - filled)
+        bar = "\u2588" * filled + "\u2591" * (bar_w - filled)
 
         elapsed = time.time() - self._start
         e_min, e_sec = int(elapsed // 60), int(elapsed % 60)
@@ -324,7 +337,7 @@ def run_for_language(
         "total_time": 0.0,
         "output_dir": out_dir,
         "report_dir": None,
-        "zip_path": None,
+        "zip_path": out_dir / f"{lang_key}.zip",
     }
 
     dashboard = Dashboard()
@@ -484,7 +497,6 @@ def run_for_language(
         )
         if settings.get("zip", True):
             zip_output(lang_key, out_dir)
-            stats["zip_path"] = out_dir / f"{lang_key}.zip"
         return stats
     finally:
         dashboard.close()
@@ -826,14 +838,14 @@ def run_checks() -> None:
 def show_settings(current: dict[str, Any]) -> dict[str, Any]:
     while True:
         rule("Settings")
-        print(f"  1. LLM Provider         : {current['provider']}")
-        print(f"  2. Annotation Level     : {current['level']}")
-        print(f"  3. Preprocessing        : {'Yes' if current['preprocess'] else 'No'}")
-        print(f"  4. Validation           : {'Yes' if current['validate'] else 'No'}")
-        print(f"  5. QA Overlay           : {'Yes' if current['qa'] else 'No'}")
-        print(f"  6. HTML Report          : {'Yes' if current['report'] else 'No'}")
-        print(f"  7. ZIP Export           : {'Yes' if current['zip'] else 'No'}")
-        print(f"  8. Max pages per PDF    : {current['max_pages']}  (0 = all)")
+        kv("1. LLM Provider", current["provider"])
+        kv("2. Annotation Level", str(current["level"]))
+        kv("3. Preprocessing", "Yes" if current["preprocess"] else "No")
+        kv("4. Validation", "Yes" if current["validate"] else "No")
+        kv("5. QA Overlay", "Yes" if current["qa"] else "No")
+        kv("6. HTML Report", "Yes" if current["report"] else "No")
+        kv("7. ZIP Export", "Yes" if current["zip"] else "No")
+        kv("8. Max pages per PDF", f"{current['max_pages']}  (0 = all)")
         print(f"  {'-' * 40}")
         print("  0. Back to main menu")
         print()
@@ -906,8 +918,10 @@ def main() -> None:
         rule("Select Language")
         for i, k in enumerate(sorted_langs, 1):
             count = len(lang_groups[k])
-            print(
-                f"  [{i}] {LANG_DISPLAY.get(k, k.capitalize())} ({count} PDF{'s' if count != 1 else ''})"
+            menu_item(
+                i,
+                LANG_DISPLAY.get(k, k.capitalize()),
+                f"({count} PDF{'s' if count != 1 else ''})",
             )
         rule()
         print("  [S]ettings  [Q]uota  [E]xit")
@@ -940,8 +954,8 @@ def main() -> None:
         rule()
         for i, fname in enumerate(files, 1):
             n = get_page_count(BASE / fname)
-            extra = f"  ({n} pages)" if n is not None else ""
-            print(f"  [{i}] {fname}{extra}")
+            extra = f"({n} pages)" if n is not None else ""
+            menu_item(i, fname, extra)
         print("  [0] Process All")
         print("  [B] Back to languages")
         print()
@@ -984,16 +998,16 @@ def main() -> None:
                 total_est += mp if mp > 0 else 0
 
         rule("Processing Summary")
-        print(f"  Language           : {LANG_DISPLAY.get(lang_key, lang_key)}")
-        print(f"  PDF Count          : {len(selected_files)}")
-        print(f"  Provider           : {settings['provider']}")
-        print(f"  RFQ Level          : {settings['level']}")
-        print(f"  Preprocessing      : {'Yes' if settings['preprocess'] else 'No'}")
-        print(f"  Validation         : {'Yes' if settings['validate'] else 'No'}")
-        print(f"  QA Overlay         : {'Yes' if settings['qa'] else 'No'}")
-        print(f"  HTML Report        : {'Yes' if settings['report'] else 'No'}")
-        print(f"  ZIP Export         : {'Yes' if settings['zip'] else 'No'}")
-        print(f"  Estimated Pages    : {total_est}")
+        kv("Language", LANG_DISPLAY.get(lang_key, lang_key))
+        kv("PDF Count", str(len(selected_files)))
+        kv("Provider", settings["provider"])
+        kv("RFQ Level", str(settings["level"]))
+        kv("Preprocessing", "Yes" if settings["preprocess"] else "No")
+        kv("Validation", "Yes" if settings["validate"] else "No")
+        kv("QA Overlay", "Yes" if settings["qa"] else "No")
+        kv("HTML Report", "Yes" if settings["report"] else "No")
+        kv("ZIP Export", "Yes" if settings["zip"] else "No")
+        kv("Estimated Pages", str(total_est))
         rule()
         proceed = input("  Start Processing? (Y/N): ").strip().upper()
         if proceed != "Y":

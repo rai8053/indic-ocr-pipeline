@@ -75,6 +75,26 @@ def bold(text: str = "") -> None:
         print(text)
 
 
+def accent(text: str = "") -> None:
+    """Print an accent-level message (bold cyan). Used for live/active state."""
+    c = _get_console()
+    if c:
+        c.print(text, style="bold cyan")
+    else:
+        print(text)
+
+
+# Named styles, exposed so callers that need raw Rich markup (e.g. the live
+# dashboard) share the same palette instead of hardcoding style strings.
+STYLE_INFO = "bold blue"
+STYLE_OK = "bold green"
+STYLE_WARN = "bold yellow"
+STYLE_ERR = "bold red"
+STYLE_BOLD = "bold"
+STYLE_ACCENT = "bold cyan"
+STYLE_DIM = "dim"
+
+
 def raw(text: str = "") -> None:
     """Print text with inline Rich markup (e.g. ``[bold]text[/bold]``)."""
     c = _get_console()
@@ -85,22 +105,22 @@ def raw(text: str = "") -> None:
         print(cleaned)
 
 
-def rule(title: str = "", char: str = "=") -> None:
-    """Print a horizontal rule with an optional title."""
+def rule(title: str = "", char: str = "-") -> None:
+    """Print a horizontal rule with an optional title, matching banner()'s box style."""
     line = char * 52
     c = _get_console()
-    if c:
-        if title:
+    if title:
+        if c:
             c.print(f"\n[blue]{line}[/blue]")
-            c.print(f"      [bold]{title}[/bold]")
+            c.print(f"  [bold]{title}[/bold]")
             c.print(f"[blue]{line}[/blue]")
         else:
-            c.print(f"[blue]{line}[/blue]")
-    else:
-        if title:
             print(f"\n{line}")
-            print(f"           {title}")
+            print(f"  {title}")
             print(f"{line}")
+    else:
+        if c:
+            c.print(f"[blue]{line}[/blue]")
         else:
             print(line)
 
@@ -117,11 +137,12 @@ def banner(title: str = "", subtitle: str = "") -> None:
         c.print("[blue]|[/blue]")
         c.print(f"[blue]+{line}+[/blue]")
     else:
-        print(f"\n{'=' * 52}")
-        print(f"\n  {title}")
+        print(f"\n+{line}+")
+        print(f"|  {title}")
         if subtitle:
-            print(f"  {subtitle}")
-        print(f"\n{'=' * 52}")
+            print(f"|  {subtitle}")
+        print("|")
+        print(f"+{line}+")
 
 
 def panel(title: str = "", content: str = "", border: str = "blue") -> None:
@@ -144,6 +165,32 @@ def panel(title: str = "", content: str = "", border: str = "blue") -> None:
             print(f"{'=' * 52}")
         if content:
             print(content)
+
+
+def kv(label: str, value: str, width: int = 22, indent: int = 2) -> None:
+    """Print an aligned 'label : value' row, e.g. for settings/summary screens."""
+    pad = " " * indent
+    c = _get_console()
+    if c:
+        c.print(f"{pad}[bold]{label:<{width}}[/bold]: {value}")
+    else:
+        print(f"{pad}{label:<{width}}: {value}")
+
+
+def menu_item(num: str | int, label: str, meta: str = "", indent: int = 2) -> None:
+    """Print a consistent numbered menu row, e.g. '  [1] Odia (4 PDFs)'."""
+    pad = " " * indent
+    c = _get_console()
+    text = f"{pad}[{num}] {label}"
+    if meta:
+        text = f"{text}  {meta}"
+    if c:
+        styled = f"{pad}[bold cyan][{num}][/bold cyan] {label}"
+        if meta:
+            styled += f"  [dim]{meta}[/dim]"
+        c.print(styled)
+    else:
+        print(text)
 
 
 # ---------------------------------------------------------------------------
