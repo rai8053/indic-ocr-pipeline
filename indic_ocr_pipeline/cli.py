@@ -946,6 +946,148 @@ def show_project_overview() -> None:
     print()
 
 
+def show_about() -> None:
+    """Display the About screen with project info."""
+    c = __import__("indic_ocr_pipeline.utils.helpers", fromlist=["_get_console"])._get_console()
+    if c is not None:
+        try:
+            from rich import box
+            from rich.panel import Panel
+
+            outer = Panel(
+                "                          [bold]About Indic OCR Pipeline[/bold]",
+                box=box.ROUNDED,
+                style="blue",
+                width=78,
+            )
+            c.print(outer)
+        except Exception:
+            raw("[bold]About Indic OCR Pipeline[/bold]")
+    else:
+        raw("[bold]About Indic OCR Pipeline[/bold]")
+
+    raw("\n  [bold]Version[/bold]         : v1.0.0")
+    raw("  [bold]Author[/bold]          : Raihan Hazra")
+    raw("  [bold]License[/bold]         : MIT")
+    raw("  [bold]Repository[/bold]      : https://github.com/rai8053/indic-ocr-pipeline")
+
+    _section("Description")
+    raw("  Indic OCR Dataset Pipeline is an AI-powered toolkit for generating")
+    raw("  RFQ Level-4 document datasets from scanned Indic-language PDFs.")
+
+    _section("Core Components")
+    components = [
+        "Google Cloud Vision OCR",
+        "RFQ Level-4 Layout Detection",
+        "Reading Order Detection",
+        "Caption & Figure Relations",
+        "Multi-provider LLM Validation",
+        "HTML Quality Reports",
+        "Visual QA Overlay",
+        "Dataset Export",
+    ]
+    for comp in components:
+        raw(f"  [green]+[/green] {comp}")
+
+    print()
+    input("  Press [Enter] to return to the Main Menu...")
+    print()
+
+
+def show_previous_reports() -> None:
+    """Display the Previous Reports screen."""
+    c = __import__("indic_ocr_pipeline.utils.helpers", fromlist=["_get_console"])._get_console()
+    if c is not None:
+        try:
+            from rich import box
+            from rich.panel import Panel
+
+            outer = Panel(
+                "                           [bold]Previous Reports[/bold]",
+                box=box.ROUNDED,
+                style="blue",
+                width=78,
+            )
+            c.print(outer)
+        except Exception:
+            raw("[bold]Previous Reports[/bold]")
+    else:
+        raw("[bold]Previous Reports[/bold]")
+
+    print()
+    raw("  No saved reports were found.")
+    print()
+    raw("  [bold]Future versions will support:[/bold]")
+    features = [
+        "Report history",
+        "Search reports",
+        "Filter by language",
+        "Filter by date",
+        "Processing statistics",
+        "Benchmark history",
+        "Open HTML reports",
+        "Export reports",
+    ]
+    for f in features:
+        raw(f"  * {f}")
+    print()
+    raw("  [bold]Status:[/bold] [yellow]Coming Soon[/yellow]")
+    print()
+    input("  Press [Enter] to return to the Main Menu...")
+    print()
+
+
+def show_benchmark() -> None:
+    """Display the Benchmark screen."""
+    c = __import__("indic_ocr_pipeline.utils.helpers", fromlist=["_get_console"])._get_console()
+    if c is not None:
+        try:
+            from rich import box
+            from rich.panel import Panel
+
+            outer = Panel(
+                "                        [bold]Benchmark Dashboard[/bold]",
+                box=box.ROUNDED,
+                style="blue",
+                width=78,
+            )
+            c.print(outer)
+        except Exception:
+            raw("[bold]Benchmark Dashboard[/bold]")
+    else:
+        raw("[bold]Benchmark Dashboard[/bold]")
+
+    print()
+    raw("  No benchmark data available.")
+    print()
+    raw("  [bold]This feature will allow comparison of:[/bold]")
+    engines = [
+        "Google Vision",
+        "PaddleOCR",
+        "EasyOCR",
+        "Tesseract",
+    ]
+    for eng in engines:
+        raw(f"  [green]+[/green] {eng}")
+    print()
+    raw("  [bold]Metrics:[/bold]")
+    metrics = [
+        "OCR Accuracy",
+        "CER",
+        "WER",
+        "Processing Time",
+        "Cost/Page",
+        "Memory Usage",
+    ]
+    for m in metrics:
+        raw(f"  * {m}")
+    print()
+    raw("  [bold]Status:[/bold] [yellow]Coming Soon[/yellow]")
+    print()
+    input("  Press [Enter] to return to the Main Menu...")
+    print()
+
+
 def main() -> None:
     run_checks()
     show_project_overview()
@@ -1132,11 +1274,11 @@ def main() -> None:
         elif raw_in == "3":
             show_quota_monitor(settings)
         elif raw_in == "4":
-            info("  Benchmark: Not yet implemented.")
+            show_benchmark()
         elif raw_in == "5":
-            info("  View Previous Reports: Not yet implemented.")
+            show_previous_reports()
         elif raw_in == "6":
-            info("  About: Not yet implemented.")
+            show_about()
         else:
             warn("  Invalid choice.")
 
