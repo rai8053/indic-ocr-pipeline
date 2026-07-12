@@ -805,22 +805,38 @@ def run_checks() -> None:
         for label, val in system_rows:
             raw(f" [green]+[/green] {label:<20s}: {val}")
 
-    _section("Environment")
+    _section("LLM Providers")
+    providers_tbl = [
+        ("Gemini", "Ready", "Primary"),
+        ("GLM-4V", "Ready", "Secondary"),
+        ("Groq", "Ready", "Fallback"),
+        ("OpenRouter", "Ready", "Fallback"),
+        ("IAMHC", "Ready", "Final"),
+    ]
     if c is not None:
         try:
-            t = Table(show_header=False, box=None, padding=(0, 2))
-            t.add_column(style="bold", width=22)
-            t.add_column()
-            for prov, key in _key_map.items():
-                status = "Configured" if key else "[yellow]Not set[/yellow]"
-                t.add_row(f" [green]+[/green] {prov}", status)
+            from rich import box
+            from rich.table import Table
+
+            t = Table(box=box.HEAVY, padding=(0, 2))
+            t.add_column("Provider", style="bold", width=14)
+            t.add_column("Status")
+            t.add_column("Priority")
+            for prov, _s, priority in providers_tbl:
+                key_ok = _key_map.get(prov, "")
+                status_display = "[green]Ready[/green]" if key_ok else "[yellow]Key not set[/yellow]"
+                t.add_row(prov, status_display, priority)
             c.print(t)
         except Exception:
-            for prov, key in _key_map.items():
-                raw(f" [green]+[/green] {prov:<20s}: {'Configured' if key else 'Not set'}")
+            for prov, _s, priority in providers_tbl:
+                key_ok = _key_map.get(prov, "")
+                status_display = "Ready" if key_ok else "Key not set"
+                raw(f"  {prov:<14s} {status_display:<14s} {priority}")
     else:
-        for prov, key in _key_map.items():
-            raw(f" [green]+[/green] {prov:<20s}: {'Configured' if key else 'Not set'}")
+        for prov, _s, priority in providers_tbl:
+            key_ok = _key_map.get(prov, "")
+            status_display = "Ready" if key_ok else "Key not set"
+            raw(f"  {prov:<14s} {status_display:<14s} {priority}")
 
     _section("Capabilities")
     capabilities = [
