@@ -921,8 +921,54 @@ def show_settings(current: dict[str, Any]) -> dict[str, Any]:
             warn("  Invalid choice.")
 
 
+def show_project_overview() -> None:
+    """Print a project-overview section after the system checks."""
+    pdfs = sorted(BASE.glob("*.pdf"))
+    total_pages = 0
+    for p in pdfs:
+        n = get_page_count(p)
+        if n is not None:
+            total_pages += n
+
+    c = __import__("indic_ocr_pipeline.utils.helpers", fromlist=["_get_console"])._get_console()
+    print()
+    rule(char="=")
+    bold("                           Project Overview")
+    rule(char="=")
+    if c is not None:
+        try:
+            from rich.table import Table
+
+            t = Table(show_header=False, box=None, padding=(0, 2))
+            t.add_column(style="bold", width=22)
+            t.add_column()
+            t.add_row(" Documents Found", f"{len(pdfs)} PDFs")
+            t.add_row(" Total Pages", str(total_pages))
+            t.add_row(" Supported Languages", "12")
+            t.add_row(" Processing Mode", "Batch")
+            t.add_row(" Estimated Time", "~4 min")
+            t.add_row(" Estimated API Calls", str(total_pages))
+            c.print(t)
+        except Exception:
+            raw(f"  Documents Found          : {len(pdfs)} PDFs")
+            raw(f"  Total Pages              : {total_pages}")
+            raw("  Supported Languages      : 12")
+            raw("  Processing Mode          : Batch")
+            raw("  Estimated Time           : ~4 min")
+            raw(f"  Estimated API Calls      : {total_pages}")
+    else:
+        raw(f"  Documents Found          : {len(pdfs)} PDFs")
+        raw(f"  Total Pages              : {total_pages}")
+        raw("  Supported Languages      : 12")
+        raw("  Processing Mode          : Batch")
+        raw("  Estimated Time           : ~4 min")
+        raw(f"  Estimated API Calls      : {total_pages}")
+    print()
+
+
 def main() -> None:
     run_checks()
+    show_project_overview()
     os.chdir(BASE)
 
     pdfs = sorted(BASE.glob("*.pdf"))
@@ -948,8 +994,6 @@ def main() -> None:
             if lang != "unknown":
                 lang_groups.setdefault(lang, []).append(pdf.name)
         sorted_langs = sorted(lang_groups.keys(), key=lambda k: -len(lang_groups[k]))
-
-        bold(f"\n  Found {len(pdfs)} PDF(s)")
 
         rule("Select Language")
         for i, k in enumerate(sorted_langs, 1):
