@@ -43,7 +43,8 @@ def create_submission_zip(
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for j in json_files:
-            data = json.load(open(j, encoding="utf-8"))
+            with open(j, encoding="utf-8") as f:
+                data = json.load(f)
             zf.writestr(f"{lang}/{j.stem}.json", json.dumps(data, ensure_ascii=False, indent=2))
             img_name = data.get("image", "")
             if img_name:

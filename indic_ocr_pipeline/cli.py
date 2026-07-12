@@ -324,7 +324,7 @@ def run_for_language(
         "total_time": 0.0,
         "output_dir": out_dir,
         "report_dir": None,
-        "zip_path": out_dir / f"{lang_key}.zip",
+        "zip_path": None,
     }
 
     dashboard = Dashboard()
@@ -484,6 +484,7 @@ def run_for_language(
         )
         if settings.get("zip", True):
             zip_output(lang_key, out_dir)
+            stats["zip_path"] = out_dir / f"{lang_key}.zip"
         return stats
     finally:
         dashboard.close()
