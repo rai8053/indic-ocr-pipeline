@@ -705,6 +705,7 @@ def run_checks() -> None:
 
     try:
         import psutil
+
         cpu = platform.processor() or "Intel Core Ultra 5 125H"
         ram = f"{round(psutil.virtual_memory().total / (1024**3))} GB"
     except ImportError:
@@ -721,19 +722,29 @@ def run_checks() -> None:
             from rich.table import Table
 
             outer = Panel(
-                "\n".join([
-                    "                    [bold]Indic OCR Dataset Pipeline [cyan]" + version + "[/cyan][/bold]",
-                    "          RFQ Level-4 Document Intelligence & Dataset Generator",
-                ]),
+                "\n".join(
+                    [
+                        "                    [bold]Indic OCR Dataset Pipeline [cyan]"
+                        + version
+                        + "[/cyan][/bold]",
+                        "          RFQ Level-4 Document Intelligence & Dataset Generator",
+                    ]
+                ),
                 box=box.ROUNDED,
                 style="blue",
                 width=80,
             )
             c.print(outer)
         except Exception:
-            banner("Indic OCR Dataset Pipeline " + version, "RFQ Level-4 Document Intelligence & Dataset Generator")
+            banner(
+                "Indic OCR Dataset Pipeline " + version,
+                "RFQ Level-4 Document Intelligence & Dataset Generator",
+            )
     else:
-        banner("Indic OCR Dataset Pipeline " + version, "RFQ Level-4 Document Intelligence & Dataset Generator")
+        banner(
+            "Indic OCR Dataset Pipeline " + version,
+            "RFQ Level-4 Document Intelligence & Dataset Generator",
+        )
 
     _section("System")
 
@@ -778,7 +789,9 @@ def run_checks() -> None:
             t.add_column("Priority")
             for prov, _s, priority in providers_tbl:
                 key_ok = _key_map.get(prov, "")
-                status_display = "[green]Ready[/green]" if key_ok else "[yellow]Key not set[/yellow]"
+                status_display = (
+                    "[green]Ready[/green]" if key_ok else "[yellow]Key not set[/yellow]"
+                )
                 t.add_row(prov, status_display, priority)
             c.print(t)
         except Exception:
@@ -834,7 +847,7 @@ def run_checks() -> None:
     lang_names = sorted(name for lang, name in LANG_DISPLAY.items() if lang != "unknown")
     cols = 4
     for i in range(0, len(lang_names), cols):
-        chunk = lang_names[i:i+cols]
+        chunk = lang_names[i : i + cols]
         cells = [f"[bold cyan][{i+j+1:02d}][/bold cyan] {nm:<12}" for j, nm in enumerate(chunk)]
         raw("  " + "     ".join(cells))
 
@@ -964,7 +977,9 @@ def main() -> None:
         sorted_langs = sorted(lang_groups.keys(), key=lambda k: -len(lang_groups[k]))
 
         raw("\n  [bold]Detected Documents[/bold]")
-        c2 = __import__("indic_ocr_pipeline.utils.helpers", fromlist=["_get_console"])._get_console()
+        c2 = __import__(
+            "indic_ocr_pipeline.utils.helpers", fromlist=["_get_console"]
+        )._get_console()
         if c2 is not None:
             try:
                 from rich import box
@@ -984,12 +999,16 @@ def main() -> None:
                 for i, k in enumerate(sorted_langs, 1):
                     count = len(lang_groups[k])
                     total_p = sum(get_page_count(BASE / f) or 0 for f in lang_groups[k])
-                    raw(f"  [{i:02d}] {LANG_DISPLAY.get(k, k.capitalize()):<12s} {count} PDFs  {total_p} pages")
+                    raw(
+                        f"  [{i:02d}] {LANG_DISPLAY.get(k, k.capitalize()):<12s} {count} PDFs  {total_p} pages"
+                    )
         else:
             for i, k in enumerate(sorted_langs, 1):
                 count = len(lang_groups[k])
                 total_p = sum(get_page_count(BASE / f) or 0 for f in lang_groups[k])
-                raw(f"  [{i:02d}] {LANG_DISPLAY.get(k, k.capitalize()):<12s} {count} PDFs  {total_p} pages")
+                raw(
+                    f"  [{i:02d}] {LANG_DISPLAY.get(k, k.capitalize()):<12s} {count} PDFs  {total_p} pages"
+                )
         return sorted_langs
 
     def _process_pdfs_flow(settings: dict[str, Any]) -> None:
