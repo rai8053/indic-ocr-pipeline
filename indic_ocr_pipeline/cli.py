@@ -871,6 +871,14 @@ def run_checks() -> None:
         for label, val in repo_rows:
             raw(f" {label:<20s}: {val}")
 
+    _section("Supported Languages")
+    lang_names = sorted(name for lang, name in LANG_DISPLAY.items() if lang != "unknown")
+    cols = 4
+    for i in range(0, len(lang_names), cols):
+        chunk = lang_names[i:i+cols]
+        cells = [f"[bold cyan][{i+j+1:02d}][/bold cyan] {nm:<12}" for j, nm in enumerate(chunk)]
+        raw("  " + "     ".join(cells))
+
     print()
 
     if critical:
