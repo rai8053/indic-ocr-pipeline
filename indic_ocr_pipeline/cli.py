@@ -822,32 +822,21 @@ def run_checks() -> None:
         for prov, key in _key_map.items():
             raw(f" [green]+[/green] {prov:<20s}: {'Configured' if key else 'Not set'}")
 
-    _section("Pipeline")
-    pipeline_rows = [
-        ("OCR Engine", "Google Cloud Vision"),
-        ("Layout Classes", "13"),
-        ("Validation", "Enabled"),
-        ("LLM Failover", "5 Providers"),
-        ("Reading Order", "Enabled"),
-        ("Caption Relations", "Enabled"),
-        ("QA Overlay", "Enabled"),
-        ("HTML Report", "Enabled"),
-        ("ZIP Export", "Enabled"),
+    _section("Capabilities")
+    capabilities = [
+        "OCR Extraction",
+        "RFQ Level-4 Annotation",
+        "Reading Order Detection",
+        "Caption <-> Figure Relations",
+        "Multi-provider Validation",
+        "Dataset Generation",
+        "HTML Quality Reports",
+        "Visual QA Overlay",
+        "ZIP Packaging",
+        "Batch Processing",
     ]
-    if c is not None:
-        try:
-            t = Table(show_header=False, box=None, padding=(0, 2))
-            t.add_column(style="bold", width=22)
-            t.add_column()
-            for label, val in pipeline_rows:
-                t.add_row(f" {label}", val)
-            c.print(t)
-        except Exception:
-            for label, val in pipeline_rows:
-                raw(f" {label:<20s}: {val}")
-    else:
-        for label, val in pipeline_rows:
-            raw(f" {label:<20s}: {val}")
+    for cap in capabilities:
+        raw(f"  [green]+[/green] {cap}")
 
     _section("Repository")
     repo_rows = [
