@@ -446,7 +446,9 @@ def main() -> None:
 
     valid_providers = {"gemini", "glm", "iamhc", "openrouter", "groq"}
     if args.provider not in valid_providers:
-        parser.error(f"Unknown provider '{args.provider}'. Valid: {', '.join(sorted(valid_providers))}")
+        parser.error(
+            f"Unknown provider '{args.provider}'. Valid: {', '.join(sorted(valid_providers))}"
+        )
 
     process_pdf(
         Path(args.pdf),
